@@ -1,7 +1,7 @@
 // Unified models configuration for Cloudflare Workers AI
 // This file contains all supported models organized by category with context windows
 //
-// Auto-generated on: 2025-11-24T09:33:06.062Z
+// Auto-generated on: 2025-12-01T09:36:09.977Z
 // To update: npm run update-models
 
 // === CONTEXT WINDOW MAPPING ===
@@ -65,6 +65,7 @@ export const MODEL_CONTEXT_WINDOWS = {
 	"@cf/qwen/qwen3-30b-a3b-fp8": 4096,
 	"@cf/meta/llama-3.1-8b-instruct-awq": 128000,
 	"@cf/unum/uform-gen2-qwen-500m": 4096,
+	"@cf/black-forest-labs/flux-2-dev": 4096,
 	"@hf/thebloke/zephyr-7b-beta-awq": 4096,
 	"@cf/google/gemma-7b-it-lora": 8192,
 	"@cf/qwen/qwen1.5-1.8b-chat": 4096,
@@ -235,6 +236,7 @@ export const MODEL_CATEGORIES = {
 		"@cf/lykon/dreamshaper-8-lcm",
 		"@cf/leonardo/phoenix-1.0",
 		"@cf/stabilityai/stable-diffusion-xl-base-1.0",
+		"@cf/black-forest-labs/flux-2-dev",
 		"@cf/runwayml/stable-diffusion-v1-5-img2img",
 		"@cf/leonardo/lucid-origin"
 	],
@@ -466,6 +468,9 @@ export const MODEL_CAPABILITIES = {
 	],
 	"@cf/unum/uform-gen2-qwen-500m": [
 		"vision"
+	],
+	"@cf/black-forest-labs/flux-2-dev": [
+		"image-generation"
 	],
 	"@hf/thebloke/zephyr-7b-beta-awq": [
 		"text-generation"
