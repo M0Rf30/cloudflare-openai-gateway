@@ -1,7 +1,7 @@
 // Unified models configuration for Cloudflare Workers AI
 // This file contains all supported models organized by category with context windows
 //
-// Auto-generated on: 2025-12-01T09:36:09.977Z
+// Auto-generated on: 2026-01-19T09:43:16.228Z
 // To update: npm run update-models
 
 // === CONTEXT WINDOW MAPPING ===
@@ -15,7 +15,6 @@ export const MODEL_CONTEXT_WINDOWS = {
 	"@hf/nexusflow/starling-lm-7b-beta": 4096,
 	"@cf/meta/llama-3-8b-instruct": 8192,
 	"@cf/meta/llama-3.2-3b-instruct": 128000,
-	"@hf/thebloke/llamaguard-7b-awq": 4096,
 	"@hf/thebloke/neural-chat-7b-v3-1-awq": 4096,
 	"@cf/meta/llama-guard-3-8b": 4096,
 	"@cf/qwen/qwen3-embedding-0.6b": 4096,
@@ -55,6 +54,7 @@ export const MODEL_CONTEXT_WINDOWS = {
 	"@cf/meta/m2m100-1.2b": 4096,
 	"@cf/ai4bharat/indictrans2-en-indic-1B": 4096,
 	"@hf/thebloke/deepseek-coder-6.7b-instruct-awq": 4096,
+	"@cf/black-forest-labs/flux-2-klein-4b": 4096,
 	"@cf/baai/bge-small-en-v1.5": 512,
 	"@cf/qwen/qwen2.5-coder-32b-instruct": 32768,
 	"@cf/deepseek-ai/deepseek-math-7b-instruct": 4096,
@@ -102,7 +102,6 @@ export const MODEL_CATEGORIES = {
 		"@hf/nexusflow/starling-lm-7b-beta",
 		"@cf/meta/llama-3-8b-instruct",
 		"@cf/meta/llama-3.2-3b-instruct",
-		"@hf/thebloke/llamaguard-7b-awq",
 		"@hf/thebloke/neural-chat-7b-v3-1-awq",
 		"@cf/meta/llama-guard-3-8b",
 		"@cf/meta/llama-2-7b-chat-fp16",
@@ -156,7 +155,6 @@ export const MODEL_CATEGORIES = {
 		"@hf/nexusflow/starling-lm-7b-beta",
 		"@cf/meta/llama-3-8b-instruct",
 		"@cf/meta/llama-3.2-3b-instruct",
-		"@hf/thebloke/llamaguard-7b-awq",
 		"@hf/thebloke/neural-chat-7b-v3-1-awq",
 		"@cf/meta/llama-guard-3-8b",
 		"@cf/meta/llama-2-7b-chat-fp16",
@@ -236,6 +234,7 @@ export const MODEL_CATEGORIES = {
 		"@cf/lykon/dreamshaper-8-lcm",
 		"@cf/leonardo/phoenix-1.0",
 		"@cf/stabilityai/stable-diffusion-xl-base-1.0",
+		"@cf/black-forest-labs/flux-2-klein-4b",
 		"@cf/black-forest-labs/flux-2-dev",
 		"@cf/runwayml/stable-diffusion-v1-5-img2img",
 		"@cf/leonardo/lucid-origin"
@@ -317,9 +316,6 @@ export const MODEL_CAPABILITIES = {
 		"text-generation"
 	],
 	"@cf/meta/llama-3.2-3b-instruct": [
-		"text-generation"
-	],
-	"@hf/thebloke/llamaguard-7b-awq": [
 		"text-generation"
 	],
 	"@hf/thebloke/neural-chat-7b-v3-1-awq": [
@@ -438,6 +434,9 @@ export const MODEL_CAPABILITIES = {
 	],
 	"@hf/thebloke/deepseek-coder-6.7b-instruct-awq": [
 		"text-generation"
+	],
+	"@cf/black-forest-labs/flux-2-klein-4b": [
+		"image-generation"
 	],
 	"@cf/baai/bge-small-en-v1.5": [
 		"embeddings"
