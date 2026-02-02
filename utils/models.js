@@ -1,7 +1,7 @@
 // Unified models configuration for Cloudflare Workers AI
 // This file contains all supported models organized by category with context windows
 //
-// Auto-generated on: 2026-01-19T09:43:16.228Z
+// Auto-generated on: 2026-02-02T10:00:26.010Z
 // To update: npm run update-models
 
 // === CONTEXT WINDOW MAPPING ===
@@ -13,6 +13,7 @@ export const MODEL_CONTEXT_WINDOWS = {
 	"@cf/huggingface/distilbert-sst-2-int8": 4096,
 	"@cf/google/gemma-2b-it-lora": 8192,
 	"@hf/nexusflow/starling-lm-7b-beta": 4096,
+	"@cf/black-forest-labs/flux-2-klein-9b": 4096,
 	"@cf/meta/llama-3-8b-instruct": 8192,
 	"@cf/meta/llama-3.2-3b-instruct": 128000,
 	"@hf/thebloke/neural-chat-7b-v3-1-awq": 4096,
@@ -228,6 +229,7 @@ export const MODEL_CATEGORIES = {
 		"@cf/ai4bharat/indictrans2-en-indic-1B"
 	],
 	"image_generation": [
+		"@cf/black-forest-labs/flux-2-klein-9b",
 		"@cf/runwayml/stable-diffusion-v1-5-inpainting",
 		"@cf/black-forest-labs/flux-1-schnell",
 		"@cf/bytedance/stable-diffusion-xl-lightning",
@@ -311,6 +313,9 @@ export const MODEL_CAPABILITIES = {
 	],
 	"@hf/nexusflow/starling-lm-7b-beta": [
 		"text-generation"
+	],
+	"@cf/black-forest-labs/flux-2-klein-9b": [
+		"image-generation"
 	],
 	"@cf/meta/llama-3-8b-instruct": [
 		"text-generation"
@@ -556,7 +561,7 @@ export const DEFAULT_MODELS = {
 	"audio_stt": "@cf/openai/whisper",
 	"audio_tts": "@cf/myshell-ai/melotts",
 	"audio_translation": "@cf/meta/m2m100-1.2b",
-	"image_generation": "@cf/runwayml/stable-diffusion-v1-5-inpainting",
+	"image_generation": "@cf/black-forest-labs/flux-2-klein-9b",
 	"vision": "@cf/llava-hf/llava-1.5-7b-hf",
 	"classification": "@cf/huggingface/distilbert-sst-2-int8",
 	"rag": "@cf/baai/bge-m3"
