@@ -6,14 +6,10 @@ import {
 	parseFunctionCall,
 	formatFunctionCallResponse,
 } from '../utils/functionCalling.js';
-import {
-	MODEL_CATEGORIES,
-	DEFAULT_MODELS,
-	MODEL_CONTEXT_WINDOWS,
-	MODEL_CAPABILITIES,
-	MODEL_MAPPING,
-} from '../utils/models.js';
-import { processThink } from '../utils/format.js';
+import { MODEL_CONTEXT_WINDOWS, MODEL_CAPABILITIES, resolveModel, isOSSModel } from '../utils/models.js';
+import { processThink, extractOSSResponse, estimateTokens, getCORSHeaders } from '../utils/format.js';
+import { createChatStreamTransformer } from '../utils/stream.js';
+import { asyncErrorHandler, ValidationError } from '../utils/errors.js';
 
 // Helper function to process messages with potential image content
 async function processMultimodalMessages(messages) {
@@ -50,11 +46,11 @@ async function processMultimodalMessages(messages) {
 								};
 							} catch (error) {
 								console.error('Error fetching image URL:', error);
-								throw new Error('Image URL must be a data URI or a valid HTTP/HTTPS URL.');
+								throw new ValidationError('Image URL must be a data URI or a valid HTTP/HTTPS URL.');
 							}
 						}
 					}
-					throw new Error('Image URL must be a data URI or a valid HTTP/HTTPS URL.');
+					throw new ValidationError('Image URL must be a data URI or a valid HTTP/HTTPS URL.');
 				}
 				return item;
 			};
@@ -82,504 +78,234 @@ async function processMultimodalMessages(messages) {
 	);
 }
 
-export const chatHandler = async (request, env) => {
-	let model = '@cf/meta/llama-4-scout-17b-16e-instruct'; // Default model
-	let messages = [];
-
+export const chatHandler = asyncErrorHandler(async (request, env) => {
 	// get the current time in epoch seconds
 	const created = Math.floor(Date.now() / 1000);
 	const uuid = crypto.randomUUID();
 
-	try {
-		// If the POST data is JSON then attach it to our response.
-		if (request.headers.get('Content-Type') === 'application/json') {
-			const json = await request.json();
-
-			// Handle model selection - support both OpenAI and Cloudflare model names
-			if (json?.model) {
-				// Use supported Cloudflare models from unified configuration
-				const supportedModels = MODEL_CATEGORIES.chat;
-
-				// First check if it's an OpenAI model name that needs mapping
-				if (MODEL_MAPPING[json.model]) {
-					model = MODEL_MAPPING[json.model];
-				}
-				// Then check if the provided model is a supported Cloudflare model
-				else if (supportedModels.includes(json.model)) {
-					model = json.model;
-				} else {
-					throw new Error(`Unsupported model: ${json.model}. Supported models: ${supportedModels.join(', ')}`);
-				}
-			} else {
-				// Use default model if none provided
-				model = DEFAULT_MODELS.chat;
-			}
-
-			if (json?.messages && Array.isArray(json.messages) && json.messages.length > 0) {
-				messages = json.messages;
-			} else {
-				return Response.json(
-					{
-						error: {
-							message: 'messages are required and must be a non-empty array',
-							type: 'invalid_request_error',
-							code: 'invalid_request',
-						},
-					},
-					{ status: 400 },
-				);
-			}
-
-			if (!json?.stream) json.stream = false;
-
-			// Get model configuration and context window
-			const context_window = MODEL_CONTEXT_WINDOWS[model];
-
-			// Handle max_tokens parameter with reasonable defaults and limits
-			// Always use a numeric value (never undefined or null) for max_tokens
-			let max_tokens = 1024; // Fallback default
-
-			// If max_tokens is specified in the request and is a valid number, use it
-			if (typeof json.max_tokens === 'number' && json.max_tokens > 0) {
-				max_tokens = Math.min(json.max_tokens, context_window); // Don't exceed context window
-			} else {
-				// Otherwise calculate a default based on model's context window
-				// Cap at 16k tokens to avoid hitting Cloudflare's practical limits
-				max_tokens = Math.min(Math.floor(context_window * 0.7), 16384);
-			}
-
-			// Ensure max_tokens is at least 10 tokens
-			max_tokens = Math.max(10, max_tokens);
-
-			// Handle other generation parameters
-			const temperature =
-				json?.temperature && typeof json.temperature === 'number'
-					? Math.max(0, Math.min(json.temperature, 2)) // Clamp between 0 and 2
-					: 0.7; // Default temperature
-
-			const topP =
-				json?.top_p && typeof json.top_p === 'number'
-					? Math.max(0, Math.min(json.top_p, 1)) // Clamp between 0 and 1
-					: 0.9; // Default top_p
-
-			// Handle function calling
-			let tools = null;
-			let toolChoice = null;
-			if (json?.tools && Array.isArray(json.tools)) {
-				tools = json.tools;
-				toolChoice = json?.tool_choice || 'auto';
-
-				// Validate tool definitions
-				for (const tool of tools) {
-					if (tool.type !== 'function') {
-						throw new Error(`Unsupported tool type: ${tool.type}. Only 'function' is supported.`);
-					}
-					if (!tool.function?.name) {
-						throw new Error('Tool function must have a name');
-					}
-				}
-			}
-
-			// Legacy function calling support
-			if (json?.functions && Array.isArray(json.functions)) {
-				// Convert legacy functions to tools format
-				tools = json.functions.map(func => ({
-					type: 'function',
-					function: func,
-				}));
-				toolChoice = json?.function_call || 'auto';
-			}
-
-			let buffer = '';
-			const decoder = new TextDecoder();
-			const encoder = new TextEncoder();
-			let isFinished = false;
-			let pastThinkTag = false; // New state variable
-			const thinkTagEnd = '</think>';
-
-			const transformer = new TransformStream({
-				transform(chunk, controller) {
-					if (isFinished) return;
-
-					buffer += decoder.decode(chunk);
-
-					if (!pastThinkTag) {
-						const thinkIndex = buffer.indexOf(thinkTagEnd);
-						if (thinkIndex !== -1) {
-							// Found the tag, trim the buffer and proceed
-							buffer = buffer.substring(thinkIndex + thinkTagEnd.length);
-							pastThinkTag = true;
-						} else {
-							// Tag not found yet, keep buffering and don't send anything
-							return;
-						}
-					}
-
-					// Process buffered data and try to find the complete message
-					while (true) {
-						const newlineIndex = buffer.indexOf('\n');
-						if (newlineIndex === -1) {
-							// If no line breaks are found, it means there is no complete message, wait for the next chunk
-							break;
-						}
-
-						// Extract a complete message line
-						const line = buffer.slice(0, newlineIndex + 1);
-						buffer = buffer.slice(newlineIndex + 1); // Update buffer
-
-						// Process this line
-						try {
-							if (line.startsWith('data: ')) {
-								const content = line.slice('data: '.length);
-								const doneflag = content.trim() == '[DONE]';
-								if (doneflag) {
-									// Send final chunk with finish_reason
-									const finalChunk =
-										'data: ' +
-										JSON.stringify({
-											id: uuid,
-											created,
-											object: 'chat.completion.chunk',
-											model: json.model || model,
-											choices: [
-												{
-													delta: {},
-													index: 0,
-													finish_reason: 'stop',
-												},
-											],
-										}) +
-										'\n\n';
-									controller.enqueue(encoder.encode(finalChunk));
-									controller.enqueue(encoder.encode('data: [DONE]\n\n'));
-									isFinished = true;
-									return;
-								}
-
-								const data = JSON.parse(content);
-								if (data.response) {
-									// For OSS models, extract the actual text response instead of JSONifying the whole data object
-									// The response field contains the actual text content we need to send to the client
-									const actualContent =
-										typeof data.response === 'string'
-											? data.response
-											: data.response?.text || data.response?.content || JSON.stringify(data.response);
-
-									const newChunk =
-										'data: ' +
-										JSON.stringify({
-											id: uuid,
-											created,
-											object: 'chat.completion.chunk',
-											model: json.model || model,
-											choices: [
-												{
-													delta: {
-														role: 'assistant',
-														content: actualContent,
-													},
-													index: 0,
-													finish_reason: null,
-												},
-											],
-										}) +
-										'\n\n';
-									controller.enqueue(encoder.encode(newChunk));
-								}
-							}
-						} catch (err) {
-							console.error('Error parsing streaming line:', err);
-						}
-					}
-				},
-
-				flush(controller) {
-					// Ensure stream ends properly if not already finished
-					if (!isFinished) {
-						const finalChunk =
-							'data: ' +
-							JSON.stringify({
-								id: uuid,
-								created,
-								object: 'chat.completion.chunk',
-								model: json.model || model,
-								choices: [
-									{
-										delta: {},
-										index: 0,
-										finish_reason: 'stop',
-									},
-								],
-							}) +
-							'\n\n';
-						controller.enqueue(encoder.encode(finalChunk));
-						controller.enqueue(encoder.encode('data: [DONE]\n\n'));
-					}
-				},
-			});
-
-			// Prepare AI parameters
-			let processedMessages = messages;
-			const aiParams = {
-				stream: json.stream,
-				max_tokens,
-				temperature,
-				topP,
-			};
-
-			// Store original messages before any processing that might be skipped
-			const originalMessages = [...messages];
-
-			// Process messages for multimodal content
-			processedMessages = await processMultimodalMessages(originalMessages);
-
-			// Determine if the model supports function calling
-			const modelSupportsFunctionCalling = MODEL_CAPABILITIES[model]?.includes('function-calling');
-
-			// Handle function calling logic
-			if (tools) {
-				if (modelSupportsFunctionCalling) {
-					// Convert function calling messages to a format Cloudflare Workers AI understands
-					processedMessages = processFunctionMessages(processedMessages, tools);
-					processedMessages = addFunctionContext(processedMessages, tools);
-				} else {
-					// If tools are provided but the model doesn't support function calling,
-					// remove tools and toolChoice from parameters and revert messages
-					tools = null;
-					toolChoice = null;
-					// Revert processedMessages to original (multimodal processed) state
-					processedMessages = await processMultimodalMessages(originalMessages, model);
-				}
-			}
-
-			// Special handling for OpenAI OSS models that require 'input' instead of 'messages'
-			if (model === '@cf/openai/gpt-oss-120b' || model === '@cf/openai/gpt-oss-20b') {
-				let inputText = '';
-				for (const message of processedMessages) {
-					if (message.role === 'system') {
-						inputText += `[SYSTEM] ${message.content}\n`;
-					} else if (message.role === 'user') {
-						inputText += `[USER] ${message.content}\n`;
-					} else if (message.role === 'assistant') {
-						inputText += `[ASSISTANT] ${message.content}\n`;
-					}
-				}
-				aiParams.input = inputText.trim();
-				// Ensure tools and toolChoice are not sent for OSS models if they were previously set
-				delete aiParams.tools;
-				delete aiParams.tool_choice;
-			} else {
-				aiParams.messages = processedMessages;
-				// Add tools and toolChoice to aiParams only if they are still valid
-				if (tools) {
-					aiParams.tools = tools;
-					aiParams.tool_choice = toolChoice;
-				}
-			}
-
-			// Check cache for non-streaming requests (don't cache function calls)
-			let cachedResponse = null;
-			let cacheKey = null;
-
-			if (env.CACHE_KV && shouldCache(aiParams) && !tools) {
-				cacheKey = await generateCacheKey(model, processedMessages, aiParams);
-				cachedResponse = await getCachedResponse(env.CACHE_KV, cacheKey);
-
-				if (cachedResponse) {
-					return Response.json({
-						...cachedResponse,
-						id: uuid, // Use new UUID for each request
-						created, // Use current timestamp
-					});
-				}
-			}
-
-			// Clone the aiParams to ensure we don't modify the original object
-			const finalParams = { ...aiParams };
-
-			// The Cloudflare backend expects max_tokens to be a valid integer value
-			// This is the key fix to address the "Type mismatch of '/max_tokens', 'integer' not in 'null'" error
-			if (finalParams.max_tokens === undefined || finalParams.max_tokens === null) {
-				// Default to a reasonable value based on model context window
-				finalParams.max_tokens = Math.floor(context_window * 0.7);
-			}
-
-			// Run the AI model with validated parameters
-			const aiResp = await env.AI.run(model, finalParams);
-
-			// Process OSS model responses specifically (they have a different format)
-			let processedResp = aiResp;
-			if (!json.stream && (model === '@cf/openai/gpt-oss-120b' || model === '@cf/openai/gpt-oss-20b')) {
-				// For OSS models in non-streaming mode, we need to extract the response content
-
-				// Handle the new response format from Cloudflare's OSS models
-				if (typeof aiResp === 'object' && aiResp !== null) {
-					// New format has output array with message objects
-					if (Array.isArray(aiResp.output)) {
-						// Find the message object with type 'message' and role 'assistant'
-						const assistantMessage = aiResp.output.find(msg => msg.type === 'message' && msg.role === 'assistant');
-
-						if (assistantMessage && Array.isArray(assistantMessage.content)) {
-							// Extract text content from the content array
-							const textContent = assistantMessage.content
-								.filter(item => item.type === 'output_text')
-								.map(item => item.text)
-								.join('');
-							processedResp = textContent || '';
-						} else {
-							// Look for output_text type objects in the output array
-							const outputTextItems = aiResp.output.filter(item => item.type === 'output_text');
-							if (outputTextItems.length > 0) {
-								// Extract text from output_text items
-								const textContent = outputTextItems.map(item => item.text).join('');
-								processedResp = textContent || '';
-							} else {
-								// Fallback to first message content if no assistant message found
-								const firstMessage = aiResp.output[0];
-								if (firstMessage && Array.isArray(firstMessage.content)) {
-									const textContent = firstMessage.content
-										.filter(item => item.type === 'output_text')
-										.map(item => item.text)
-										.join('');
-									processedResp = textContent || '';
-								} else {
-									processedResp = aiResp.text || aiResp.response || '';
-								}
-							}
-						}
-					}
-					// Handle case where response is directly in aiResp (newer format)
-					else if ('response' in aiResp) {
-						processedResp =
-							typeof aiResp.response === 'string'
-								? aiResp.response
-								: aiResp.response?.text || aiResp.response?.content || JSON.stringify(aiResp.response);
-					} else {
-						// Try to extract any text content from the response
-						processedResp = aiResp.text || aiResp.response || JSON.stringify(aiResp);
-					}
-				} else {
-					processedResp = aiResp || '';
-				}
-			}
-
-			// Piping the readableStream through the transformStream
-			if (json.stream) {
-				return new Response(aiResp.pipeThrough(transformer), {
-					headers: {
-						'content-type': 'text/event-stream',
-						'Cache-Control': 'no-cache',
-						'Connection': 'keep-alive',
-					},
-				});
-			} else {
-				// Process the response for potential function calls
-				// For OSS models, processedResp should already be the content string
-				// For other models, it might be the full response object
-				let contentToProcess = processedResp;
-				if (typeof processedResp === 'object' && processedResp !== null && 'response' in processedResp) {
-					contentToProcess = processedResp.response;
-				}
-
-				// For OSS models, ensure we're passing just the text content, not the full object
-				if (model === '@cf/openai/gpt-oss-120b' || model === '@cf/openai/gpt-oss-20b') {
-					// If processedResp is still an object, try to extract the text content
-					if (typeof processedResp === 'object' && processedResp !== null) {
-						if (Array.isArray(processedResp.output)) {
-							// Look for output_text type objects in the output array
-							const outputTextItems = processedResp.output.filter(item => item.type === 'output_text');
-							if (outputTextItems.length > 0) {
-								// Extract text from output_text items
-								contentToProcess = outputTextItems.map(item => item.text).join('');
-							}
-						}
-					}
-				}
-
-				const { hasFunction, functionCall, content } = parseFunctionCall(contentToProcess);
-
-				let response;
-				if (hasFunction && tools) {
-					// Return function call response
-					const message = formatFunctionCallResponse(functionCall, content);
-					response = {
-						id: uuid,
-						model: json.model || model,
-						created,
-						object: 'chat.completion',
-						choices: [
-							{
-								index: 0,
-								message,
-								finish_reason: 'tool_calls',
-							},
-						],
-						usage: {
-							prompt_tokens: 0,
-							completion_tokens: 0,
-							total_tokens: 0,
-						},
-					};
-				} else {
-					// Regular text response
-					const finalContent = processThink(content);
-					response = {
-						id: uuid,
-						model: json.model || model,
-						created,
-						object: 'chat.completion',
-						choices: [
-							{
-								index: 0,
-								message: {
-									role: 'assistant',
-									content: finalContent,
-								},
-								finish_reason: 'stop',
-							},
-						],
-						usage: {
-							prompt_tokens: 0,
-							completion_tokens: 0,
-							total_tokens: 0,
-						},
-					};
-				}
-
-				// Cache the response if caching is enabled (don't cache function calls)
-				if (env.CACHE_KV && cacheKey && shouldCache(aiParams) && !hasFunction) {
-					// Cache for 1 hour by default, can be configured
-					const cacheTtl =
-						env.CACHE_TTL_SECONDS && parseInt(env.CACHE_TTL_SECONDS) > 0 ? parseInt(env.CACHE_TTL_SECONDS) : 3600;
-					await cacheResponse(env.CACHE_KV, cacheKey, response, cacheTtl);
-				}
-
-				return Response.json(response);
-			}
-		} else {
-			// if there is no header or it's not json, return an error
-			return Response.json(
-				{
-					error: {
-						message: 'Invalid request. Content-Type must be application/json',
-						type: 'invalid_request_error',
-						code: 'invalid_request',
-					},
-				},
-				{ status: 400 },
-			);
-		}
-	} catch (e) {
-		console.error('Chat handler error:', e);
-		return Response.json(
-			{
-				error: {
-					message: e.message,
-					type: 'invalid_request_error',
-					code: 'invalid_request',
-				},
-			},
-			{ status: 400 },
-		);
+	if (!request.headers.get('Content-Type')?.includes('application/json')) {
+		throw new ValidationError('Invalid request. Content-Type must be application/json');
 	}
-};
+
+	const json = await request.json();
+
+	// Resolve model using shared helper
+	const model = resolveModel('chat', json?.model);
+
+	if (!json?.messages || !Array.isArray(json.messages) || json.messages.length === 0) {
+		throw new ValidationError('messages are required and must be a non-empty array', 'messages');
+	}
+
+	const messages = json.messages;
+	if (!json?.stream) json.stream = false;
+
+	// Get model configuration and context window
+	const context_window = MODEL_CONTEXT_WINDOWS[model];
+
+	// Handle max_tokens parameter with reasonable defaults and limits
+	let max_tokens = 1024; // Fallback default
+	if (typeof json.max_tokens === 'number' && json.max_tokens > 0) {
+		max_tokens = Math.min(json.max_tokens, context_window);
+	} else {
+		max_tokens = Math.min(Math.floor(context_window * 0.7), 16384);
+	}
+	max_tokens = Math.max(10, max_tokens);
+
+	// Handle other generation parameters
+	const temperature =
+		json?.temperature && typeof json.temperature === 'number' ? Math.max(0, Math.min(json.temperature, 2)) : 0.7;
+
+	const topP = json?.top_p && typeof json.top_p === 'number' ? Math.max(0, Math.min(json.top_p, 1)) : 0.9;
+
+	// Handle function calling
+	let tools = null;
+	let toolChoice = null;
+	if (json?.tools && Array.isArray(json.tools)) {
+		tools = json.tools;
+		toolChoice = json?.tool_choice || 'auto';
+
+		for (const tool of tools) {
+			if (tool.type !== 'function') {
+				throw new ValidationError(`Unsupported tool type: ${tool.type}. Only 'function' is supported.`, 'tools');
+			}
+			if (!tool.function?.name) {
+				throw new ValidationError('Tool function must have a name', 'tools');
+			}
+		}
+	}
+
+	// Legacy function calling support
+	if (json?.functions && Array.isArray(json.functions)) {
+		tools = json.functions.map(func => ({
+			type: 'function',
+			function: func,
+		}));
+		toolChoice = json?.function_call || 'auto';
+	}
+
+	// Prepare AI parameters
+	let processedMessages = messages;
+	const aiParams = {
+		stream: json.stream,
+		max_tokens,
+		temperature,
+		topP,
+	};
+
+	// Store original messages before any processing that might be skipped
+	const originalMessages = [...messages];
+
+	// Process messages for multimodal content
+	processedMessages = await processMultimodalMessages(originalMessages);
+
+	// Determine if the model supports function calling
+	const modelSupportsFunctionCalling = MODEL_CAPABILITIES[model]?.includes('function-calling');
+
+	// Handle function calling logic
+	if (tools) {
+		if (modelSupportsFunctionCalling) {
+			processedMessages = processFunctionMessages(processedMessages, tools);
+			processedMessages = addFunctionContext(processedMessages, tools);
+		} else {
+			tools = null;
+			toolChoice = null;
+			processedMessages = await processMultimodalMessages(originalMessages, model);
+		}
+	}
+
+	// Special handling for OpenAI OSS models that require 'input' instead of 'messages'
+	if (isOSSModel(model)) {
+		let inputText = '';
+		for (const message of processedMessages) {
+			if (message.role === 'system') {
+				inputText += `[SYSTEM] ${message.content}\n`;
+			} else if (message.role === 'user') {
+				inputText += `[USER] ${message.content}\n`;
+			} else if (message.role === 'assistant') {
+				inputText += `[ASSISTANT] ${message.content}\n`;
+			}
+		}
+		aiParams.input = inputText.trim();
+		delete aiParams.tools;
+		delete aiParams.tool_choice;
+	} else {
+		aiParams.messages = processedMessages;
+		if (tools) {
+			aiParams.tools = tools;
+			aiParams.tool_choice = toolChoice;
+		}
+	}
+
+	// Check cache for non-streaming requests (don't cache function calls)
+	let cacheKey = null;
+	if (env.CACHE_KV && shouldCache(aiParams) && !tools) {
+		cacheKey = await generateCacheKey(model, processedMessages, aiParams);
+		const cachedResponse = await getCachedResponse(env.CACHE_KV, cacheKey);
+
+		if (cachedResponse) {
+			return Response.json({
+				...cachedResponse,
+				id: uuid,
+				created,
+			});
+		}
+	}
+
+	// Ensure max_tokens is a valid integer for the Cloudflare backend
+	const finalParams = { ...aiParams };
+	if (finalParams.max_tokens === undefined || finalParams.max_tokens === null) {
+		finalParams.max_tokens = Math.floor(context_window * 0.7);
+	}
+
+	// Run the AI model
+	const aiResp = await env.AI.run(model, finalParams);
+
+	// Use the model name the client sent (for response compatibility)
+	const responseModel = json.model || model;
+
+	// Handle streaming response
+	if (json.stream) {
+		const transformer = createChatStreamTransformer(uuid, created, responseModel);
+		return new Response(aiResp.pipeThrough(transformer), {
+			headers: {
+				'Content-Type': 'text/event-stream',
+				'Cache-Control': 'no-cache',
+				'Connection': 'keep-alive',
+				...getCORSHeaders(),
+			},
+		});
+	}
+
+	// Non-streaming: extract content
+	let contentToProcess;
+	if (isOSSModel(model)) {
+		contentToProcess = extractOSSResponse(aiResp);
+	} else if (typeof aiResp === 'object' && aiResp !== null && 'response' in aiResp) {
+		contentToProcess = aiResp.response;
+	} else {
+		contentToProcess = aiResp;
+	}
+
+	const { hasFunction, functionCall, content } = parseFunctionCall(contentToProcess);
+
+	// Estimate token usage
+	const promptText = processedMessages.map(m => (typeof m.content === 'string' ? m.content : '')).join(' ');
+	const promptTokens = estimateTokens(promptText);
+	const completionTokens = estimateTokens(typeof content === 'string' ? content : '');
+
+	let response;
+	if (hasFunction && tools) {
+		const message = formatFunctionCallResponse(functionCall, content);
+		response = {
+			id: uuid,
+			model: responseModel,
+			created,
+			object: 'chat.completion',
+			choices: [
+				{
+					index: 0,
+					message,
+					finish_reason: 'tool_calls',
+				},
+			],
+			usage: {
+				prompt_tokens: promptTokens,
+				completion_tokens: completionTokens,
+				total_tokens: promptTokens + completionTokens,
+			},
+		};
+	} else {
+		const finalContent = processThink(content);
+		const finalCompletionTokens = estimateTokens(typeof finalContent === 'string' ? finalContent : '');
+		response = {
+			id: uuid,
+			model: responseModel,
+			created,
+			object: 'chat.completion',
+			choices: [
+				{
+					index: 0,
+					message: {
+						role: 'assistant',
+						content: finalContent,
+					},
+					finish_reason: 'stop',
+				},
+			],
+			usage: {
+				prompt_tokens: promptTokens,
+				completion_tokens: finalCompletionTokens,
+				total_tokens: promptTokens + finalCompletionTokens,
+			},
+		};
+	}
+
+	// Cache the response if caching is enabled (don't cache function calls)
+	if (env.CACHE_KV && cacheKey && shouldCache(aiParams) && !hasFunction) {
+		const cacheTtl =
+			env.CACHE_TTL_SECONDS && parseInt(env.CACHE_TTL_SECONDS) > 0 ? parseInt(env.CACHE_TTL_SECONDS) : 3600;
+		await cacheResponse(env.CACHE_KV, cacheKey, response, cacheTtl);
+	}
+
+	return Response.json(response);
+});

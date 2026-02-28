@@ -1,43 +1,27 @@
 import { storeVectors } from '../utils/vectorize.js';
-import { MODEL_CATEGORIES, MODEL_MAPPING } from '../utils/models.js';
+import { MODEL_CATEGORIES, resolveModel } from '../utils/models.js';
+import { asyncErrorHandler, ValidationError } from '../utils/errors.js';
 
-// Supported Cloudflare models from unified configuration
-const SUPPORTED_MODELS = MODEL_CATEGORIES.embeddings;
-
-export const embeddingsHandler = async (request, env) => {
+export const embeddingsHandler = asyncErrorHandler(async (request, env) => {
 	let model = '@cf/baai/bge-base-en-v1.5';
 	let pooling = 'mean';
 
 	try {
 		// Check for proper content type
-		if (request.headers.get('Content-Type') !== 'application/json') {
-			return Response.json({ error: 'Content-Type must be application/json' }, { status: 400 });
+		if (!request.headers.get('Content-Type')?.includes('application/json')) {
+			throw new ValidationError('Content-Type must be application/json');
 		}
 
 		const json = await request.json();
 
 		// Validate required fields
 		if (!json.input) {
-			return Response.json({ error: 'Missing required field: input' }, { status: 400 });
+			throw new ValidationError('Missing required field: input');
 		}
 
 		// Handle model selection - support both OpenAI and Cloudflare model names
 		if (json.model) {
-			// First check if it's an OpenAI model name that needs mapping
-			if (MODEL_MAPPING[json.model]) {
-				model = MODEL_MAPPING[json.model];
-			}
-			// Then check if the provided model is a supported Cloudflare model
-			else if (SUPPORTED_MODELS.includes(json.model)) {
-				model = json.model;
-			} else {
-				return Response.json(
-					{
-						error: `Model "${json.model}" not supported. Available models: ${SUPPORTED_MODELS.join(', ')}`,
-					},
-					{ status: 400 },
-				);
-			}
+			model = resolveModel('embeddings', json.model);
 		}
 
 		// Handle pooling method (Cloudflare specific feature)
@@ -52,23 +36,23 @@ export const embeddingsHandler = async (request, env) => {
 		if (typeof inputText === 'string') {
 			inputText = [inputText];
 		} else if (!Array.isArray(inputText)) {
-			return Response.json({ error: 'Input must be a string or array of strings' }, { status: 400 });
+			throw new ValidationError('Input must be a string or array of strings');
 		}
 
 		// Validate input length
 		if (inputText.length === 0) {
-			return Response.json({ error: 'Input cannot be empty' }, { status: 400 });
+			throw new ValidationError('Input cannot be empty');
 		}
 
 		// Check for batch size limits (Cloudflare supports up to 100 items)
 		if (inputText.length > 100) {
-			return Response.json({ error: 'Batch size cannot exceed 100 items' }, { status: 400 });
+			throw new ValidationError('Batch size cannot exceed 100 items');
 		}
 
 		// Validate each text item
 		for (const text of inputText) {
 			if (typeof text !== 'string' || text.trim().length === 0) {
-				return Response.json({ error: 'All input items must be non-empty strings' }, { status: 400 });
+				throw new ValidationError('All input items must be non-empty strings');
 			}
 		}
 
@@ -131,15 +115,16 @@ export const embeddingsHandler = async (request, env) => {
 			return Response.json({ error: 'Invalid input format or content' }, { status: 400 });
 		}
 
-		return Response.json({ error: 'AI service error' }, { status: 500 });
+		// Re-throw to let asyncErrorHandler process it
+		throw e;
 	}
-};
+});
 
 // Optional: Add a simple health check endpoint
 export const healthHandler = async (_request, _env) => {
 	return Response.json({
 		status: 'healthy',
 		timestamp: new Date().toISOString(),
-		models: SUPPORTED_MODELS,
+		models: MODEL_CATEGORIES.embeddings,
 	});
 };

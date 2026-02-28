@@ -1,4 +1,4 @@
-import { json } from 'itty-router';
+import { getCORSHeaders } from '../utils/format.js';
 
 const getModels = async env => {
 	const url = `https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/ai/models/search?hide_experimental=false`;
@@ -45,18 +45,21 @@ export const modelsHandler = async (request, env) => {
 
 	if (!env.CLOUDFLARE_ACCOUNT_ID || !env.CLOUDFLARE_API_TOKEN) {
 		// In test mode, return OpenAI aliases plus a test model
-		return json({
-			object: 'list',
-			data: [
-				...OPENAI_MODEL_ALIASES.map(model => ({ ...model, created: timestamp })),
-				{
-					id: 'test-model',
-					object: 'model',
-					created: timestamp,
-					owned_by: 'cloudflare',
-				},
-			],
-		});
+		return Response.json(
+			{
+				object: 'list',
+				data: [
+					...OPENAI_MODEL_ALIASES.map(model => ({ ...model, created: timestamp })),
+					{
+						id: 'test-model',
+						object: 'model',
+						created: timestamp,
+						owned_by: 'cloudflare',
+					},
+				],
+			},
+			{ headers: getCORSHeaders() },
+		);
 	}
 
 	const models = await getModels(env);
@@ -70,8 +73,11 @@ export const modelsHandler = async (request, env) => {
 	}));
 
 	// Combine OpenAI aliases with Cloudflare models
-	return json({
-		object: 'list',
-		data: [...OPENAI_MODEL_ALIASES.map(model => ({ ...model, created: timestamp })), ...cloudflareModels],
-	});
+	return Response.json(
+		{
+			object: 'list',
+			data: [...OPENAI_MODEL_ALIASES.map(model => ({ ...model, created: timestamp })), ...cloudflareModels],
+		},
+		{ headers: getCORSHeaders() },
+	);
 };

@@ -287,7 +287,7 @@ export function processThink(responseText) {
 }
 
 // Utility function to estimate token count
-function estimateTokens(text) {
+export function estimateTokens(text) {
 	if (!text) return 0;
 	// Rough estimation: ~4 characters per token
 	return Math.ceil(text.length / 4);
@@ -348,4 +348,61 @@ export function createStreamResponse(readableStream) {
 			...getCORSHeaders(),
 		},
 	});
+}
+
+/**
+ * Extract text content from an OSS model (gpt-oss-120b / gpt-oss-20b) response.
+ * These models return responses in multiple possible formats that need normalization.
+ * @param {*} aiResp - The raw response from env.AI.run()
+ * @returns {string} The extracted text content
+ */
+export function extractOSSResponse(aiResp) {
+	if (typeof aiResp === 'object' && aiResp !== null) {
+		// New format: output array with message objects
+		if (Array.isArray(aiResp.output)) {
+			// Look for assistant message with content array
+			const assistantMessage = aiResp.output.find(
+				msg => msg.type === 'message' && msg.role === 'assistant',
+			);
+
+			if (assistantMessage && Array.isArray(assistantMessage.content)) {
+				const textContent = assistantMessage.content
+					.filter(item => item.type === 'output_text')
+					.map(item => item.text)
+					.join('');
+				if (textContent) return textContent;
+			}
+
+			// Look for output_text type objects directly in the output array
+			const outputTextItems = aiResp.output.filter(item => item.type === 'output_text');
+			if (outputTextItems.length > 0) {
+				const textContent = outputTextItems.map(item => item.text).join('');
+				if (textContent) return textContent;
+			}
+
+			// Fallback to first message content
+			const firstMessage = aiResp.output[0];
+			if (firstMessage && Array.isArray(firstMessage.content)) {
+				const textContent = firstMessage.content
+					.filter(item => item.type === 'output_text')
+					.map(item => item.text)
+					.join('');
+				if (textContent) return textContent;
+			}
+
+			return aiResp.text || aiResp.response || '';
+		}
+
+		// Older format: response field directly
+		if ('response' in aiResp) {
+			return typeof aiResp.response === 'string'
+				? aiResp.response
+				: aiResp.response?.text || aiResp.response?.content || JSON.stringify(aiResp.response);
+		}
+
+		// Final fallback
+		return aiResp.text || aiResp.response || JSON.stringify(aiResp);
+	}
+
+	return String(aiResp || '');
 }

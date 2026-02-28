@@ -247,6 +247,17 @@ export function asyncErrorHandler(handler) {
 		try {
 			return await handler(request, env, ctx);
 		} catch (error) {
+			// Convert JSON parse errors to 400 validation errors
+			if (error instanceof SyntaxError && error.message.includes('JSON')) {
+				const parseError = new ValidationError(
+					'Invalid JSON in request body: ' + error.message,
+				);
+				logError(parseError, {
+					url: request.url,
+					method: request.method,
+				});
+				return createErrorResponse(parseError);
+			}
 			logError(error, {
 				url: request.url,
 				method: request.method,

@@ -1,336 +1,146 @@
-import { MODEL_CATEGORIES, DEFAULT_MODELS, MODEL_MAPPING } from '../utils/models.js';
-import { processThink } from '../utils/format.js';
+import { MODEL_CONTEXT_WINDOWS, calculateDefaultMaxTokens, resolveModel, isOSSModel } from '../utils/models.js';
+import { processThink, extractOSSResponse, estimateTokens, getCORSHeaders } from '../utils/format.js';
+import { createCompletionStreamTransformer } from '../utils/stream.js';
+import { asyncErrorHandler, ValidationError } from '../utils/errors.js';
 
-import { MODEL_CONTEXT_WINDOWS, calculateDefaultMaxTokens } from '../utils/models.js';
-
-export const completionHandler = async (request, env) => {
-	let model = '@cf/mistral/mistral-7b-instruct-v0.1'; // Default model
-	const error = null;
-
+export const completionHandler = asyncErrorHandler(async (request, env) => {
 	// Get the current time in epoch seconds
 	const created = Math.floor(Date.now() / 1000);
 	const uuid = crypto.randomUUID();
 
-	try {
-		// If the POST data is JSON then attach it to our response
-		if (request.headers.get('Content-Type') === 'application/json') {
-			const json = await request.json();
+	if (!request.headers.get('Content-Type')?.includes('application/json')) {
+		throw new ValidationError('Invalid request. Content-Type must be application/json');
+	}
 
-			// Handle model selection - support both OpenAI and Cloudflare model names
-			if (json?.model) {
-				// Use supported Cloudflare models from unified configuration
-				const supportedModels = MODEL_CATEGORIES.completion;
+	const json = await request.json();
 
-				// First check if it's an OpenAI model name that needs mapping
-				if (MODEL_MAPPING[json.model]) {
-					model = MODEL_MAPPING[json.model];
-				}
-				// Then check if the provided model is a supported Cloudflare model
-				else if (supportedModels.includes(json.model)) {
-					model = json.model;
-				} else {
-					// Fallback to environment mapper for backward compatibility
-					const mapper = env.MODEL_MAPPER ?? {};
-					model = mapper[json.model] ? mapper[json.model] : json.model;
+	// Resolve model using shared helper
+	const model = resolveModel('completion', json?.model, env.MODEL_MAPPER ?? {});
 
-					// If still not in supported list, throw error
-					if (!supportedModels.includes(model)) {
-						throw new Error(`Unsupported model: ${json.model}. Supported models: ${supportedModels.join(', ')}`);
-					}
-				}
-			} else {
-				// Use default model if none provided
-				model = DEFAULT_MODELS.completion;
-			}
+	// Validate prompt
+	if (!json?.prompt) {
+		throw new ValidationError('prompt is required', 'prompt');
+	}
 
-			// Validate prompt
-			if (json?.prompt) {
-				if (typeof json.prompt === 'string') {
-					if (json.prompt.length === 0) {
-						return Response.json(
-							{
-								error: {
-									message: 'no prompt provided',
-									type: 'invalid_request_error',
-									code: 'invalid_request',
-								},
-							},
-							{ status: 400 },
-						);
-					}
-				} else {
-					return Response.json(
-						{
-							error: {
-								message: 'prompt must be a string',
-								type: 'invalid_request_error',
-								code: 'invalid_request',
-							},
-						},
-						{ status: 400 },
-					);
-				}
-			} else {
-				return Response.json(
-					{
-						error: {
-							message: 'prompt is required',
-							type: 'invalid_request_error',
-							code: 'invalid_request',
-						},
-					},
-					{ status: 400 },
-				);
-			}
+	if (typeof json.prompt !== 'string') {
+		throw new ValidationError('prompt must be a string', 'prompt');
+	}
 
-			// Handle streaming
-			if (!json?.stream) json.stream = false;
+	if (json.prompt.length === 0) {
+		throw new ValidationError('no prompt provided', 'prompt');
+	}
 
-			// Handle max_tokens parameter with reasonable defaults and limits
-			// Use the context window of the specified model to determine max tokens
-			const contextWindow = MODEL_CONTEXT_WINDOWS[model] || 4096;
+	// Handle streaming
+	if (!json?.stream) json.stream = false;
 
-			// Calculate maxTokens based on the model's context window
-			let maxTokens;
-			if (typeof json.max_tokens === 'number' && json.max_tokens > 0) {
-				// Use provided value if it's a valid number (clamped to context window)
-				maxTokens = Math.max(1, Math.min(json.max_tokens, contextWindow));
-			} else {
-				// Use our helper function to calculate a sensible default
-				maxTokens = calculateDefaultMaxTokens(model);
-			}
+	// Handle max_tokens parameter with reasonable defaults and limits
+	const contextWindow = MODEL_CONTEXT_WINDOWS[model] || 4096;
 
-			// Handle other generation parameters
-			const temperature =
-				json?.temperature && typeof json.temperature === 'number'
-					? Math.max(0, Math.min(json.temperature, 2)) // Clamp between 0 and 2
-					: 0.7; // Default temperature
+	let maxTokens;
+	if (typeof json.max_tokens === 'number' && json.max_tokens > 0) {
+		// Use provided value if it's a valid number (clamped to context window)
+		maxTokens = Math.max(1, Math.min(json.max_tokens, contextWindow));
+	} else {
+		// Use our helper function to calculate a sensible default
+		maxTokens = calculateDefaultMaxTokens(model);
+	}
 
-			const topP =
-				json?.top_p && typeof json.top_p === 'number'
-					? Math.max(0, Math.min(json.top_p, 1)) // Clamp between 0 and 1
-					: 0.9; // Default top_p
+	// Handle other generation parameters
+	const temperature =
+		json?.temperature && typeof json.temperature === 'number'
+			? Math.max(0, Math.min(json.temperature, 2)) // Clamp between 0 and 2
+			: 0.7; // Default temperature
 
-			// Handle streaming response
-			if (json.stream) {
-				let buffer = '';
-				const decoder = new TextDecoder();
-				const encoder = new TextEncoder();
-				let pastThinkTag = false; // New state variable
-				const thinkTagEnd = '</think>';
+	const topP =
+		json?.top_p && typeof json.top_p === 'number'
+			? Math.max(0, Math.min(json.top_p, 1)) // Clamp between 0 and 1
+			: 0.9; // Default top_p
 
-				const transformer = new TransformStream({
-					transform(chunk, controller) {
-						buffer += decoder.decode(chunk);
+	// Store the response model name (what client sent or resolved model)
+	const responseModel = json.model || model;
 
-						if (!pastThinkTag) {
-							const thinkIndex = buffer.indexOf(thinkTagEnd);
-							if (thinkIndex !== -1) {
-								// Found the tag, trim the buffer and proceed
-								buffer = buffer.substring(thinkIndex + thinkTagEnd.length);
-								pastThinkTag = true;
-							} else {
-								// Tag not found yet, keep buffering and don't send anything
-								return;
-							}
-						}
+	// Handle streaming response
+	if (json.stream) {
+		const transformer = createCompletionStreamTransformer(uuid, created, responseModel);
 
-						// Process buffered data and try to find the complete message
-						while (true) {
-							const newlineIndex = buffer.indexOf('\n');
-							if (newlineIndex === -1) {
-								// If no line breaks are found, it means there is no complete message, wait for the next chunk
-								break;
-							}
+		// Prepare AI parameters
+		const aiParams = {
+			stream: json.stream,
+			max_tokens: maxTokens,
+			temperature,
+			top_p: topP,
+		};
 
-							// Extract a complete message line
-							const line = buffer.slice(0, newlineIndex + 1);
-							buffer = buffer.slice(newlineIndex + 1); // Update buffer
-
-							// Process this line
-							try {
-								if (line.startsWith('data: ')) {
-									const content = line.slice('data: '.length);
-									const doneflag = content.trim() == '[DONE]';
-									if (doneflag) {
-										controller.enqueue(encoder.encode('data: [DONE]\n\n'));
-										return;
-									}
-
-									const data = JSON.parse(content);
-									const newChunk =
-										'data: ' +
-										JSON.stringify({
-											id: uuid,
-											created,
-											object: 'text_completion',
-											model: json.model || model, // Return the requested model name
-											choices: [
-												{
-													text: data.response,
-													index: 0,
-													logprobs: null,
-													finish_reason: null,
-												},
-											],
-										}) +
-										'\n\n';
-									controller.enqueue(encoder.encode(newChunk));
-								}
-							} catch (err) {
-								console.error('Error parsing line:', err);
-							}
-						}
-					},
-				});
-
-				// Prepare AI parameters
-				const aiParams = {
-					stream: json.stream,
-					max_tokens: maxTokens,
-					temperature,
-					top_p: topP,
-				};
-
-				// Special handling for OpenAI OSS models that require 'input' instead of 'prompt'
-				if (model === '@cf/openai/gpt-oss-120b' || model === '@cf/openai/gpt-oss-20b') {
-					aiParams.input = json.prompt;
-				} else {
-					aiParams.prompt = json.prompt;
-				}
-
-				// Run the AI model with configured parameters
-				const aiResp = await env.AI.run(model, aiParams);
-
-				// Return streaming response
-				return new Response(aiResp.pipeThrough(transformer), {
-					headers: {
-						'content-type': 'text/event-stream',
-						'Cache-Control': 'no-cache',
-						'Connection': 'keep-alive',
-					},
-				});
-			} else {
-				// Non-streaming response
-				// Prepare AI parameters
-				const aiParams = {
-					max_tokens: maxTokens,
-					temperature,
-					top_p: topP,
-				};
-
-				// Special handling for OpenAI OSS models that require 'input' instead of 'prompt'
-				if (model === '@cf/openai/gpt-oss-120b' || model === '@cf/openai/gpt-oss-20b') {
-					aiParams.input = json.prompt;
-				} else {
-					aiParams.prompt = json.prompt;
-				}
-
-				// Run the AI model with configured parameters
-				const aiResp = await env.AI.run(model, aiParams);
-
-				// Process OSS model responses specifically (they have a different format)
-				let responseText = '';
-				if (model === '@cf/openai/gpt-oss-120b' || model === '@cf/openai/gpt-oss-20b') {
-					// Handle the new response format from Cloudflare's OSS models
-					if (typeof aiResp === 'object' && aiResp !== null) {
-						// New format has output array with message objects
-						if (Array.isArray(aiResp.output)) {
-							// Look for output_text type objects in the output array
-							const outputTextItems = aiResp.output.filter(item => item.type === 'output_text');
-							if (outputTextItems.length > 0) {
-								// Extract text from output_text items
-								responseText = outputTextItems.map(item => item.text).join('');
-							} else {
-								// Fallback to first message content if no output_text found
-								const firstMessage = aiResp.output[0];
-								if (firstMessage && Array.isArray(firstMessage.content)) {
-									responseText = firstMessage.content
-										.filter(item => item.type === 'output_text')
-										.map(item => item.text)
-										.join('');
-								} else {
-									responseText = aiResp.text || aiResp.response || '';
-								}
-							}
-						}
-						// Handle case where response is directly in aiResp (newer format)
-						else if ('response' in aiResp) {
-							responseText =
-								typeof aiResp.response === 'string'
-									? aiResp.response
-									: aiResp.response?.text || aiResp.response?.content || JSON.stringify(aiResp.response);
-						} else {
-							// Try to extract any text content from the response
-							responseText = aiResp.text || aiResp.response || JSON.stringify(aiResp);
-						}
-					} else {
-						responseText = aiResp || '';
-					}
-				} else {
-					responseText = aiResp.response || '';
-				}
-
-				const finalResponseText = processThink(responseText);
-
-				return Response.json({
-					id: uuid,
-					model: json.model || model, // Return the requested model name
-					created,
-					object: 'text_completion',
-					choices: [
-						{
-							index: 0,
-							finish_reason: 'stop',
-							text: finalResponseText,
-							logprobs: null,
-						},
-					],
-					usage: {
-						prompt_tokens: 0,
-						completion_tokens: 0,
-						total_tokens: 0,
-					},
-				});
-			}
+		// Special handling for OpenAI OSS models that require 'input' instead of 'prompt'
+		if (isOSSModel(model)) {
+			aiParams.input = json.prompt;
+		} else {
+			aiParams.prompt = json.prompt;
 		}
-	} catch (e) {
-		console.error('Completion handler error:', e);
-		return Response.json(
-			{
-				error: {
-					message: e.message,
-					type: 'invalid_request_error',
-					code: 'invalid_request',
-				},
-			},
-			{ status: 400 },
-		);
-	}
 
-	// If there is no header or it's not json, return an error
-	if (error) {
-		return Response.json(
-			{
-				error: {
-					message: error.message,
-					type: 'invalid_request_error',
-					code: 'invalid_request',
-				},
-			},
-			{ status: 400 },
-		);
-	}
+		// Run the AI model with configured parameters
+		const aiResp = await env.AI.run(model, aiParams);
 
-	// If we get here, return a 400 error
-	return Response.json(
-		{
-			error: {
-				message: 'Invalid request. Content-Type must be application/json',
-				type: 'invalid_request_error',
-				code: 'invalid_request',
+		// Return streaming response
+		return new Response(aiResp.pipeThrough(transformer), {
+			headers: {
+				'Content-Type': 'text/event-stream',
+				'Cache-Control': 'no-cache',
+				'Connection': 'keep-alive',
+				...getCORSHeaders(),
 			},
-		},
-		{ status: 400 },
-	);
-};
+		});
+	} else {
+		// Non-streaming response
+		// Prepare AI parameters
+		const aiParams = {
+			max_tokens: maxTokens,
+			temperature,
+			top_p: topP,
+		};
+
+		// Special handling for OpenAI OSS models that require 'input' instead of 'prompt'
+		if (isOSSModel(model)) {
+			aiParams.input = json.prompt;
+		} else {
+			aiParams.prompt = json.prompt;
+		}
+
+		// Run the AI model with configured parameters
+		const aiResp = await env.AI.run(model, aiParams);
+
+		// Extract response text using shared helper
+		let responseText;
+		if (isOSSModel(model)) {
+			responseText = extractOSSResponse(aiResp);
+		} else {
+			responseText = aiResp.response || '';
+		}
+
+		const finalResponseText = processThink(responseText);
+
+		// Estimate token usage
+		const promptTokens = estimateTokens(json.prompt);
+		const completionTokens = estimateTokens(finalResponseText);
+
+		return Response.json({
+			id: uuid,
+			model: responseModel,
+			created,
+			object: 'text_completion',
+			choices: [
+				{
+					index: 0,
+					finish_reason: 'stop',
+					text: finalResponseText,
+					logprobs: null,
+				},
+			],
+			usage: {
+				prompt_tokens: promptTokens,
+				completion_tokens: completionTokens,
+				total_tokens: promptTokens + completionTokens,
+			},
+		});
+	}
+});

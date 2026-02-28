@@ -173,6 +173,6 @@ describe('Embeddings Handler', () => {
 		const result = await response.json();
 
 		expect(response.status).toBe(500);
-		expect(result.error).toBe('AI service error');
+		expect(result.error.message).toBe('AI service error');
 	});
 });
