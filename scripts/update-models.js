@@ -456,6 +456,59 @@ export const getModelRecommendation = useCase => {
 
 	return recommendations[useCase] || [];
 };
+
+// === SHARED HELPERS FOR ROUTE HANDLERS ===
+
+/**
+ * Check if a model is an OpenAI OSS model requiring special parameter handling.
+ * OSS models use 'input' instead of 'messages'/'prompt' and return a different response format.
+ * @param {string} model - The Cloudflare model path
+ * @returns {boolean}
+ */
+export const isOSSModel = (model) => {
+	return model === '@cf/openai/gpt-oss-120b' || model === '@cf/openai/gpt-oss-20b';
+};
+
+/**
+ * Resolve a requested model name to a Cloudflare model path.
+ * Handles OpenAI model name mapping, direct Cloudflare model names, and env-based overrides.
+ * @param {string} category - The model category key from MODEL_CATEGORIES (e.g. 'chat', 'completion')
+ * @param {string|undefined} requestedModel - The model name from the request
+ * @param {Object} [envMapper={}] - Optional env.MODEL_MAPPER for backward-compatible overrides
+ * @returns {string} The resolved Cloudflare model path
+ * @throws {Error} If the model is not supported
+ */
+export const resolveModel = (category, requestedModel, envMapper = {}) => {
+	const supportedModels = MODEL_CATEGORIES[category];
+	if (!supportedModels) {
+		throw new Error(\`Unknown model category: \${category}\`);
+	}
+
+	// No model specified — use default
+	if (!requestedModel) {
+		return DEFAULT_MODELS[category];
+	}
+
+	// OpenAI model name mapping
+	if (MODEL_MAPPING[requestedModel]) {
+		return MODEL_MAPPING[requestedModel];
+	}
+
+	// Direct Cloudflare model name
+	if (supportedModels.includes(requestedModel)) {
+		return requestedModel;
+	}
+
+	// Env-based mapper fallback (used by completion handler for backward compat)
+	if (envMapper && envMapper[requestedModel]) {
+		const mapped = envMapper[requestedModel];
+		if (supportedModels.includes(mapped)) {
+			return mapped;
+		}
+	}
+
+	throw new Error(\`Unsupported model: \${requestedModel}. Supported models: \${supportedModels.join(', ')}\`);
+};
 `;
 }
 
