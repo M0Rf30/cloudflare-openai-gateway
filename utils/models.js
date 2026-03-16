@@ -1,7 +1,7 @@
 // Unified models configuration for Cloudflare Workers AI
 // This file contains all supported models organized by category with context windows
 //
-// Auto-generated on: 2026-03-09T14:10:32.652Z
+// Auto-generated on: 2026-03-16T10:10:51.974Z
 // To update: npm run update-models
 
 // === CONTEXT WINDOW MAPPING ===
@@ -62,6 +62,7 @@ export const MODEL_CONTEXT_WINDOWS = {
 	"@cf/deepseek-ai/deepseek-math-7b-instruct": 4096,
 	"@cf/tiiuae/falcon-7b-instruct": 4096,
 	"@hf/nousresearch/hermes-2-pro-mistral-7b": 4096,
+	"@cf/nvidia/nemotron-3-120b-a12b": 4096,
 	"@cf/baai/bge-base-en-v1.5": 512,
 	"@cf/aisingapore/gemma-sea-lion-v4-27b-it": 4096,
 	"@cf/qwen/qwen3-30b-a3b-fp8": 4096,
@@ -84,7 +85,6 @@ export const MODEL_CONTEXT_WINDOWS = {
 	"@cf/openai/gpt-oss-20b": 4096,
 	"@cf/google/embeddinggemma-300m": 4096,
 	"@cf/baai/bge-reranker-base": 4096,
-	"@cf/facebook/nonomni-bart-large-cnn": 4096,
 	"@hf/google/gemma-7b-it": 4096,
 	"@cf/leonardo/lucid-origin": 4096,
 	"@cf/qwen/qwen1.5-14b-chat-awq": 4096,
@@ -132,6 +132,7 @@ export const MODEL_CATEGORIES = {
 		"@cf/deepseek-ai/deepseek-math-7b-instruct",
 		"@cf/tiiuae/falcon-7b-instruct",
 		"@hf/nousresearch/hermes-2-pro-mistral-7b",
+		"@cf/nvidia/nemotron-3-120b-a12b",
 		"@cf/aisingapore/gemma-sea-lion-v4-27b-it",
 		"@cf/qwen/qwen3-30b-a3b-fp8",
 		"@cf/meta/llama-3.1-8b-instruct-awq",
@@ -145,7 +146,6 @@ export const MODEL_CATEGORIES = {
 		"@cf/microsoft/phi-2",
 		"@cf/facebook/bart-large-cnn",
 		"@cf/openai/gpt-oss-20b",
-		"@cf/facebook/nonomni-bart-large-cnn",
 		"@hf/google/gemma-7b-it",
 		"@cf/qwen/qwen1.5-14b-chat-awq",
 		"@cf/openchat/openchat-3.5-0106",
@@ -187,6 +187,7 @@ export const MODEL_CATEGORIES = {
 		"@cf/deepseek-ai/deepseek-math-7b-instruct",
 		"@cf/tiiuae/falcon-7b-instruct",
 		"@hf/nousresearch/hermes-2-pro-mistral-7b",
+		"@cf/nvidia/nemotron-3-120b-a12b",
 		"@cf/aisingapore/gemma-sea-lion-v4-27b-it",
 		"@cf/qwen/qwen3-30b-a3b-fp8",
 		"@cf/meta/llama-3.1-8b-instruct-awq",
@@ -200,7 +201,6 @@ export const MODEL_CATEGORIES = {
 		"@cf/microsoft/phi-2",
 		"@cf/facebook/bart-large-cnn",
 		"@cf/openai/gpt-oss-20b",
-		"@cf/facebook/nonomni-bart-large-cnn",
 		"@hf/google/gemma-7b-it",
 		"@cf/qwen/qwen1.5-14b-chat-awq",
 		"@cf/openchat/openchat-3.5-0106",
@@ -467,6 +467,9 @@ export const MODEL_CAPABILITIES = {
 	"@hf/nousresearch/hermes-2-pro-mistral-7b": [
 		"text-generation"
 	],
+	"@cf/nvidia/nemotron-3-120b-a12b": [
+		"text-generation"
+	],
 	"@cf/baai/bge-base-en-v1.5": [
 		"embeddings"
 	],
@@ -532,9 +535,6 @@ export const MODEL_CAPABILITIES = {
 	],
 	"@cf/baai/bge-reranker-base": [
 		"text-classification"
-	],
-	"@cf/facebook/nonomni-bart-large-cnn": [
-		"summarization"
 	],
 	"@hf/google/gemma-7b-it": [
 		"text-generation"
