@@ -1,7 +1,7 @@
 // Unified models configuration for Cloudflare Workers AI
 // This file contains all supported models organized by category with context windows
 //
-// Auto-generated on: 2026-03-16T10:10:51.974Z
+// Auto-generated on: 2026-03-23T10:09:05.598Z
 // To update: npm run update-models
 
 // === CONTEXT WINDOW MAPPING ===
@@ -16,6 +16,7 @@ export const MODEL_CONTEXT_WINDOWS = {
 	"@cf/black-forest-labs/flux-2-klein-9b": 4096,
 	"@cf/meta/llama-3-8b-instruct": 8192,
 	"@cf/meta/llama-3.2-3b-instruct": 128000,
+	"@cf/moonshotai/kimi-k2.5": 4096,
 	"@hf/thebloke/neural-chat-7b-v3-1-awq": 4096,
 	"@cf/meta/llama-guard-3-8b": 4096,
 	"@cf/qwen/qwen3-embedding-0.6b": 4096,
@@ -105,6 +106,7 @@ export const MODEL_CATEGORIES = {
 		"@hf/nexusflow/starling-lm-7b-beta",
 		"@cf/meta/llama-3-8b-instruct",
 		"@cf/meta/llama-3.2-3b-instruct",
+		"@cf/moonshotai/kimi-k2.5",
 		"@hf/thebloke/neural-chat-7b-v3-1-awq",
 		"@cf/meta/llama-guard-3-8b",
 		"@cf/meta/llama-2-7b-chat-fp16",
@@ -160,6 +162,7 @@ export const MODEL_CATEGORIES = {
 		"@hf/nexusflow/starling-lm-7b-beta",
 		"@cf/meta/llama-3-8b-instruct",
 		"@cf/meta/llama-3.2-3b-instruct",
+		"@cf/moonshotai/kimi-k2.5",
 		"@hf/thebloke/neural-chat-7b-v3-1-awq",
 		"@cf/meta/llama-guard-3-8b",
 		"@cf/meta/llama-2-7b-chat-fp16",
@@ -327,6 +330,9 @@ export const MODEL_CAPABILITIES = {
 		"text-generation"
 	],
 	"@cf/meta/llama-3.2-3b-instruct": [
+		"text-generation"
+	],
+	"@cf/moonshotai/kimi-k2.5": [
 		"text-generation"
 	],
 	"@hf/thebloke/neural-chat-7b-v3-1-awq": [
