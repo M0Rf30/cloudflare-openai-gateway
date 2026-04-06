@@ -1,7 +1,7 @@
 // Unified models configuration for Cloudflare Workers AI
 // This file contains all supported models organized by category with context windows
 //
-// Auto-generated on: 2026-03-23T10:09:05.598Z
+// Auto-generated on: 2026-04-06T10:16:33.033Z
 // To update: npm run update-models
 
 // === CONTEXT WINDOW MAPPING ===
@@ -72,6 +72,7 @@ export const MODEL_CONTEXT_WINDOWS = {
 	"@cf/black-forest-labs/flux-2-dev": 4096,
 	"@hf/thebloke/zephyr-7b-beta-awq": 4096,
 	"@cf/google/gemma-7b-it-lora": 8192,
+	"@cf/google/gemma-4-26b-a4b-it": 4096,
 	"@cf/qwen/qwen1.5-1.8b-chat": 4096,
 	"@cf/mistralai/mistral-small-3.1-24b-instruct": 128000,
 	"@cf/meta/llama-3-8b-instruct-awq": 8192,
@@ -140,6 +141,7 @@ export const MODEL_CATEGORIES = {
 		"@cf/meta/llama-3.1-8b-instruct-awq",
 		"@hf/thebloke/zephyr-7b-beta-awq",
 		"@cf/google/gemma-7b-it-lora",
+		"@cf/google/gemma-4-26b-a4b-it",
 		"@cf/qwen/qwen1.5-1.8b-chat",
 		"@cf/mistralai/mistral-small-3.1-24b-instruct",
 		"@cf/meta/llama-3-8b-instruct-awq",
@@ -196,6 +198,7 @@ export const MODEL_CATEGORIES = {
 		"@cf/meta/llama-3.1-8b-instruct-awq",
 		"@hf/thebloke/zephyr-7b-beta-awq",
 		"@cf/google/gemma-7b-it-lora",
+		"@cf/google/gemma-4-26b-a4b-it",
 		"@cf/qwen/qwen1.5-1.8b-chat",
 		"@cf/mistralai/mistral-small-3.1-24b-instruct",
 		"@cf/meta/llama-3-8b-instruct-awq",
@@ -498,6 +501,9 @@ export const MODEL_CAPABILITIES = {
 		"text-generation"
 	],
 	"@cf/google/gemma-7b-it-lora": [
+		"text-generation"
+	],
+	"@cf/google/gemma-4-26b-a4b-it": [
 		"text-generation"
 	],
 	"@cf/qwen/qwen1.5-1.8b-chat": [
