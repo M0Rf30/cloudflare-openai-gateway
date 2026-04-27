@@ -1,7 +1,7 @@
 // Unified models configuration for Cloudflare Workers AI
 // This file contains all supported models organized by category with context windows
 //
-// Auto-generated on: 2026-04-06T10:16:33.033Z
+// Auto-generated on: 2026-04-27T11:09:44.424Z
 // To update: npm run update-models
 
 // === CONTEXT WINDOW MAPPING ===
@@ -42,6 +42,7 @@ export const MODEL_CONTEXT_WINDOWS = {
 	"@hf/thebloke/mistral-7b-instruct-v0.1-awq": 4096,
 	"@cf/qwen/qwen1.5-7b-chat-awq": 4096,
 	"@cf/meta/llama-3.2-1b-instruct": 60000,
+	"@cf/moonshotai/kimi-k2.6": 4096,
 	"@cf/zai-org/glm-4.7-flash": 4096,
 	"@hf/thebloke/llama-2-13b-chat-awq": 4096,
 	"@cf/microsoft/resnet-50": 4096,
@@ -123,6 +124,7 @@ export const MODEL_CATEGORIES = {
 		"@hf/thebloke/mistral-7b-instruct-v0.1-awq",
 		"@cf/qwen/qwen1.5-7b-chat-awq",
 		"@cf/meta/llama-3.2-1b-instruct",
+		"@cf/moonshotai/kimi-k2.6",
 		"@cf/zai-org/glm-4.7-flash",
 		"@hf/thebloke/llama-2-13b-chat-awq",
 		"@hf/thebloke/deepseek-coder-6.7b-base-awq",
@@ -180,6 +182,7 @@ export const MODEL_CATEGORIES = {
 		"@hf/thebloke/mistral-7b-instruct-v0.1-awq",
 		"@cf/qwen/qwen1.5-7b-chat-awq",
 		"@cf/meta/llama-3.2-1b-instruct",
+		"@cf/moonshotai/kimi-k2.6",
 		"@cf/zai-org/glm-4.7-flash",
 		"@hf/thebloke/llama-2-13b-chat-awq",
 		"@hf/thebloke/deepseek-coder-6.7b-base-awq",
@@ -411,6 +414,9 @@ export const MODEL_CAPABILITIES = {
 		"text-generation"
 	],
 	"@cf/meta/llama-3.2-1b-instruct": [
+		"text-generation"
+	],
+	"@cf/moonshotai/kimi-k2.6": [
 		"text-generation"
 	],
 	"@cf/zai-org/glm-4.7-flash": [
