@@ -1,23 +1,20 @@
 // Unified models configuration for Cloudflare Workers AI
 // This file contains all supported models organized by category with context windows
 //
-// Auto-generated on: 2026-04-27T11:09:44.424Z
+// Auto-generated on: 2026-05-25T12:37:46.164Z
 // To update: npm run update-models
 
 // === CONTEXT WINDOW MAPPING ===
 export const MODEL_CONTEXT_WINDOWS = {
 	"@cf/pipecat-ai/smart-turn-v2": 4096,
 	"@cf/openai/gpt-oss-120b": 4096,
-	"@cf/qwen/qwen1.5-0.5b-chat": 4096,
 	"@cf/baai/bge-m3": 8192,
 	"@cf/huggingface/distilbert-sst-2-int8": 4096,
 	"@cf/google/gemma-2b-it-lora": 8192,
-	"@hf/nexusflow/starling-lm-7b-beta": 4096,
 	"@cf/black-forest-labs/flux-2-klein-9b": 4096,
 	"@cf/meta/llama-3-8b-instruct": 8192,
 	"@cf/meta/llama-3.2-3b-instruct": 128000,
 	"@cf/moonshotai/kimi-k2.5": 4096,
-	"@hf/thebloke/neural-chat-7b-v3-1-awq": 4096,
 	"@cf/meta/llama-guard-3-8b": 4096,
 	"@cf/qwen/qwen3-embedding-0.6b": 4096,
 	"@cf/meta/llama-2-7b-chat-fp16": 4096,
@@ -26,43 +23,32 @@ export const MODEL_CONTEXT_WINDOWS = {
 	"@cf/mistral/mistral-7b-instruct-v0.2-lora": 32768,
 	"@cf/deepgram/aura-2-es": 4096,
 	"@cf/openai/whisper": 30,
-	"@cf/tinyllama/tinyllama-1.1b-chat-v1.0": 4096,
 	"@cf/pfnet/plamo-embedding-1b": 4096,
 	"@hf/mistral/mistral-7b-instruct-v0.2": 4096,
-	"@cf/fblgit/una-cybertron-7b-v2-bf16": 4096,
 	"@cf/llava-hf/llava-1.5-7b-hf": 4096,
 	"@cf/deepseek-ai/deepseek-r1-distill-qwen-32b": 4096,
 	"@cf/runwayml/stable-diffusion-v1-5-inpainting": 4096,
 	"@cf/deepgram/flux": 4096,
 	"@cf/deepgram/nova-3": 4096,
 	"@cf/black-forest-labs/flux-1-schnell": 77,
-	"@cf/thebloke/discolm-german-7b-v1-awq": 4096,
 	"@cf/meta/llama-2-7b-chat-int8": 4096,
 	"@cf/meta/llama-3.1-8b-instruct-fp8": 128000,
-	"@hf/thebloke/mistral-7b-instruct-v0.1-awq": 4096,
-	"@cf/qwen/qwen1.5-7b-chat-awq": 4096,
 	"@cf/meta/llama-3.2-1b-instruct": 60000,
 	"@cf/moonshotai/kimi-k2.6": 4096,
 	"@cf/zai-org/glm-4.7-flash": 4096,
-	"@hf/thebloke/llama-2-13b-chat-awq": 4096,
 	"@cf/microsoft/resnet-50": 4096,
 	"@cf/bytedance/stable-diffusion-xl-lightning": 77,
-	"@hf/thebloke/deepseek-coder-6.7b-base-awq": 4096,
 	"@cf/meta-llama/llama-2-7b-chat-hf-lora": 4096,
 	"@cf/meta/llama-3.3-70b-instruct-fp8-fast": 24000,
 	"@cf/ibm-granite/granite-4.0-h-micro": 4096,
 	"@cf/lykon/dreamshaper-8-lcm": 4096,
 	"@cf/leonardo/phoenix-1.0": 4096,
 	"@cf/stabilityai/stable-diffusion-xl-base-1.0": 4096,
-	"@hf/thebloke/openhermes-2.5-mistral-7b-awq": 4096,
 	"@cf/meta/m2m100-1.2b": 4096,
 	"@cf/ai4bharat/indictrans2-en-indic-1B": 4096,
-	"@hf/thebloke/deepseek-coder-6.7b-instruct-awq": 4096,
 	"@cf/black-forest-labs/flux-2-klein-4b": 4096,
 	"@cf/baai/bge-small-en-v1.5": 512,
 	"@cf/qwen/qwen2.5-coder-32b-instruct": 32768,
-	"@cf/deepseek-ai/deepseek-math-7b-instruct": 4096,
-	"@cf/tiiuae/falcon-7b-instruct": 4096,
 	"@hf/nousresearch/hermes-2-pro-mistral-7b": 4096,
 	"@cf/nvidia/nemotron-3-120b-a12b": 4096,
 	"@cf/baai/bge-base-en-v1.5": 512,
@@ -71,10 +57,8 @@ export const MODEL_CONTEXT_WINDOWS = {
 	"@cf/meta/llama-3.1-8b-instruct-awq": 128000,
 	"@cf/unum/uform-gen2-qwen-500m": 4096,
 	"@cf/black-forest-labs/flux-2-dev": 4096,
-	"@hf/thebloke/zephyr-7b-beta-awq": 4096,
 	"@cf/google/gemma-7b-it-lora": 8192,
 	"@cf/google/gemma-4-26b-a4b-it": 4096,
-	"@cf/qwen/qwen1.5-1.8b-chat": 4096,
 	"@cf/mistralai/mistral-small-3.1-24b-instruct": 128000,
 	"@cf/meta/llama-3-8b-instruct-awq": 8192,
 	"@cf/meta/llama-3.2-11b-vision-instruct": 128000,
@@ -90,8 +74,6 @@ export const MODEL_CONTEXT_WINDOWS = {
 	"@cf/baai/bge-reranker-base": 4096,
 	"@hf/google/gemma-7b-it": 4096,
 	"@cf/leonardo/lucid-origin": 4096,
-	"@cf/qwen/qwen1.5-14b-chat-awq": 4096,
-	"@cf/openchat/openchat-3.5-0106": 4096,
 	"@cf/meta/llama-4-scout-17b-16e-instruct": 131072,
 	"@cf/google/gemma-3-12b-it": 128000,
 	"@cf/qwen/qwq-32b": 32768,
@@ -103,48 +85,32 @@ export const MODEL_CONTEXT_WINDOWS = {
 export const MODEL_CATEGORIES = {
 	"chat": [
 		"@cf/openai/gpt-oss-120b",
-		"@cf/qwen/qwen1.5-0.5b-chat",
 		"@cf/google/gemma-2b-it-lora",
-		"@hf/nexusflow/starling-lm-7b-beta",
 		"@cf/meta/llama-3-8b-instruct",
 		"@cf/meta/llama-3.2-3b-instruct",
 		"@cf/moonshotai/kimi-k2.5",
-		"@hf/thebloke/neural-chat-7b-v3-1-awq",
 		"@cf/meta/llama-guard-3-8b",
 		"@cf/meta/llama-2-7b-chat-fp16",
 		"@cf/mistral/mistral-7b-instruct-v0.1",
 		"@cf/mistral/mistral-7b-instruct-v0.2-lora",
-		"@cf/tinyllama/tinyllama-1.1b-chat-v1.0",
 		"@hf/mistral/mistral-7b-instruct-v0.2",
-		"@cf/fblgit/una-cybertron-7b-v2-bf16",
 		"@cf/deepseek-ai/deepseek-r1-distill-qwen-32b",
-		"@cf/thebloke/discolm-german-7b-v1-awq",
 		"@cf/meta/llama-2-7b-chat-int8",
 		"@cf/meta/llama-3.1-8b-instruct-fp8",
-		"@hf/thebloke/mistral-7b-instruct-v0.1-awq",
-		"@cf/qwen/qwen1.5-7b-chat-awq",
 		"@cf/meta/llama-3.2-1b-instruct",
 		"@cf/moonshotai/kimi-k2.6",
 		"@cf/zai-org/glm-4.7-flash",
-		"@hf/thebloke/llama-2-13b-chat-awq",
-		"@hf/thebloke/deepseek-coder-6.7b-base-awq",
 		"@cf/meta-llama/llama-2-7b-chat-hf-lora",
 		"@cf/meta/llama-3.3-70b-instruct-fp8-fast",
 		"@cf/ibm-granite/granite-4.0-h-micro",
-		"@hf/thebloke/openhermes-2.5-mistral-7b-awq",
-		"@hf/thebloke/deepseek-coder-6.7b-instruct-awq",
 		"@cf/qwen/qwen2.5-coder-32b-instruct",
-		"@cf/deepseek-ai/deepseek-math-7b-instruct",
-		"@cf/tiiuae/falcon-7b-instruct",
 		"@hf/nousresearch/hermes-2-pro-mistral-7b",
 		"@cf/nvidia/nemotron-3-120b-a12b",
 		"@cf/aisingapore/gemma-sea-lion-v4-27b-it",
 		"@cf/qwen/qwen3-30b-a3b-fp8",
 		"@cf/meta/llama-3.1-8b-instruct-awq",
-		"@hf/thebloke/zephyr-7b-beta-awq",
 		"@cf/google/gemma-7b-it-lora",
 		"@cf/google/gemma-4-26b-a4b-it",
-		"@cf/qwen/qwen1.5-1.8b-chat",
 		"@cf/mistralai/mistral-small-3.1-24b-instruct",
 		"@cf/meta/llama-3-8b-instruct-awq",
 		"@cf/meta/llama-3.2-11b-vision-instruct",
@@ -153,56 +119,38 @@ export const MODEL_CATEGORIES = {
 		"@cf/facebook/bart-large-cnn",
 		"@cf/openai/gpt-oss-20b",
 		"@hf/google/gemma-7b-it",
-		"@cf/qwen/qwen1.5-14b-chat-awq",
-		"@cf/openchat/openchat-3.5-0106",
 		"@cf/meta/llama-4-scout-17b-16e-instruct",
 		"@cf/google/gemma-3-12b-it",
 		"@cf/qwen/qwq-32b"
 	],
 	"completion": [
 		"@cf/openai/gpt-oss-120b",
-		"@cf/qwen/qwen1.5-0.5b-chat",
 		"@cf/google/gemma-2b-it-lora",
-		"@hf/nexusflow/starling-lm-7b-beta",
 		"@cf/meta/llama-3-8b-instruct",
 		"@cf/meta/llama-3.2-3b-instruct",
 		"@cf/moonshotai/kimi-k2.5",
-		"@hf/thebloke/neural-chat-7b-v3-1-awq",
 		"@cf/meta/llama-guard-3-8b",
 		"@cf/meta/llama-2-7b-chat-fp16",
 		"@cf/mistral/mistral-7b-instruct-v0.1",
 		"@cf/mistral/mistral-7b-instruct-v0.2-lora",
-		"@cf/tinyllama/tinyllama-1.1b-chat-v1.0",
 		"@hf/mistral/mistral-7b-instruct-v0.2",
-		"@cf/fblgit/una-cybertron-7b-v2-bf16",
 		"@cf/deepseek-ai/deepseek-r1-distill-qwen-32b",
-		"@cf/thebloke/discolm-german-7b-v1-awq",
 		"@cf/meta/llama-2-7b-chat-int8",
 		"@cf/meta/llama-3.1-8b-instruct-fp8",
-		"@hf/thebloke/mistral-7b-instruct-v0.1-awq",
-		"@cf/qwen/qwen1.5-7b-chat-awq",
 		"@cf/meta/llama-3.2-1b-instruct",
 		"@cf/moonshotai/kimi-k2.6",
 		"@cf/zai-org/glm-4.7-flash",
-		"@hf/thebloke/llama-2-13b-chat-awq",
-		"@hf/thebloke/deepseek-coder-6.7b-base-awq",
 		"@cf/meta-llama/llama-2-7b-chat-hf-lora",
 		"@cf/meta/llama-3.3-70b-instruct-fp8-fast",
 		"@cf/ibm-granite/granite-4.0-h-micro",
-		"@hf/thebloke/openhermes-2.5-mistral-7b-awq",
-		"@hf/thebloke/deepseek-coder-6.7b-instruct-awq",
 		"@cf/qwen/qwen2.5-coder-32b-instruct",
-		"@cf/deepseek-ai/deepseek-math-7b-instruct",
-		"@cf/tiiuae/falcon-7b-instruct",
 		"@hf/nousresearch/hermes-2-pro-mistral-7b",
 		"@cf/nvidia/nemotron-3-120b-a12b",
 		"@cf/aisingapore/gemma-sea-lion-v4-27b-it",
 		"@cf/qwen/qwen3-30b-a3b-fp8",
 		"@cf/meta/llama-3.1-8b-instruct-awq",
-		"@hf/thebloke/zephyr-7b-beta-awq",
 		"@cf/google/gemma-7b-it-lora",
 		"@cf/google/gemma-4-26b-a4b-it",
-		"@cf/qwen/qwen1.5-1.8b-chat",
 		"@cf/mistralai/mistral-small-3.1-24b-instruct",
 		"@cf/meta/llama-3-8b-instruct-awq",
 		"@cf/meta/llama-3.2-11b-vision-instruct",
@@ -211,8 +159,6 @@ export const MODEL_CATEGORIES = {
 		"@cf/facebook/bart-large-cnn",
 		"@cf/openai/gpt-oss-20b",
 		"@hf/google/gemma-7b-it",
-		"@cf/qwen/qwen1.5-14b-chat-awq",
-		"@cf/openchat/openchat-3.5-0106",
 		"@cf/meta/llama-4-scout-17b-16e-instruct",
 		"@cf/google/gemma-3-12b-it",
 		"@cf/qwen/qwq-32b"
@@ -314,9 +260,6 @@ export const MODEL_CAPABILITIES = {
 	"@cf/openai/gpt-oss-120b": [
 		"text-generation"
 	],
-	"@cf/qwen/qwen1.5-0.5b-chat": [
-		"text-generation"
-	],
 	"@cf/baai/bge-m3": [
 		"embeddings"
 	],
@@ -324,9 +267,6 @@ export const MODEL_CAPABILITIES = {
 		"text-classification"
 	],
 	"@cf/google/gemma-2b-it-lora": [
-		"text-generation"
-	],
-	"@hf/nexusflow/starling-lm-7b-beta": [
 		"text-generation"
 	],
 	"@cf/black-forest-labs/flux-2-klein-9b": [
@@ -339,9 +279,6 @@ export const MODEL_CAPABILITIES = {
 		"text-generation"
 	],
 	"@cf/moonshotai/kimi-k2.5": [
-		"text-generation"
-	],
-	"@hf/thebloke/neural-chat-7b-v3-1-awq": [
 		"text-generation"
 	],
 	"@cf/meta/llama-guard-3-8b": [
@@ -368,16 +305,10 @@ export const MODEL_CAPABILITIES = {
 	"@cf/openai/whisper": [
 		"speech-to-text"
 	],
-	"@cf/tinyllama/tinyllama-1.1b-chat-v1.0": [
-		"text-generation"
-	],
 	"@cf/pfnet/plamo-embedding-1b": [
 		"embeddings"
 	],
 	"@hf/mistral/mistral-7b-instruct-v0.2": [
-		"text-generation"
-	],
-	"@cf/fblgit/una-cybertron-7b-v2-bf16": [
 		"text-generation"
 	],
 	"@cf/llava-hf/llava-1.5-7b-hf": [
@@ -398,19 +329,10 @@ export const MODEL_CAPABILITIES = {
 	"@cf/black-forest-labs/flux-1-schnell": [
 		"image-generation"
 	],
-	"@cf/thebloke/discolm-german-7b-v1-awq": [
-		"text-generation"
-	],
 	"@cf/meta/llama-2-7b-chat-int8": [
 		"text-generation"
 	],
 	"@cf/meta/llama-3.1-8b-instruct-fp8": [
-		"text-generation"
-	],
-	"@hf/thebloke/mistral-7b-instruct-v0.1-awq": [
-		"text-generation"
-	],
-	"@cf/qwen/qwen1.5-7b-chat-awq": [
 		"text-generation"
 	],
 	"@cf/meta/llama-3.2-1b-instruct": [
@@ -422,17 +344,11 @@ export const MODEL_CAPABILITIES = {
 	"@cf/zai-org/glm-4.7-flash": [
 		"text-generation"
 	],
-	"@hf/thebloke/llama-2-13b-chat-awq": [
-		"text-generation"
-	],
 	"@cf/microsoft/resnet-50": [
 		"image-classification"
 	],
 	"@cf/bytedance/stable-diffusion-xl-lightning": [
 		"image-generation"
-	],
-	"@hf/thebloke/deepseek-coder-6.7b-base-awq": [
-		"text-generation"
 	],
 	"@cf/meta-llama/llama-2-7b-chat-hf-lora": [
 		"text-generation"
@@ -452,17 +368,11 @@ export const MODEL_CAPABILITIES = {
 	"@cf/stabilityai/stable-diffusion-xl-base-1.0": [
 		"image-generation"
 	],
-	"@hf/thebloke/openhermes-2.5-mistral-7b-awq": [
-		"text-generation"
-	],
 	"@cf/meta/m2m100-1.2b": [
 		"translation"
 	],
 	"@cf/ai4bharat/indictrans2-en-indic-1B": [
 		"translation"
-	],
-	"@hf/thebloke/deepseek-coder-6.7b-instruct-awq": [
-		"text-generation"
 	],
 	"@cf/black-forest-labs/flux-2-klein-4b": [
 		"image-generation"
@@ -471,12 +381,6 @@ export const MODEL_CAPABILITIES = {
 		"embeddings"
 	],
 	"@cf/qwen/qwen2.5-coder-32b-instruct": [
-		"text-generation"
-	],
-	"@cf/deepseek-ai/deepseek-math-7b-instruct": [
-		"text-generation"
-	],
-	"@cf/tiiuae/falcon-7b-instruct": [
 		"text-generation"
 	],
 	"@hf/nousresearch/hermes-2-pro-mistral-7b": [
@@ -503,16 +407,10 @@ export const MODEL_CAPABILITIES = {
 	"@cf/black-forest-labs/flux-2-dev": [
 		"image-generation"
 	],
-	"@hf/thebloke/zephyr-7b-beta-awq": [
-		"text-generation"
-	],
 	"@cf/google/gemma-7b-it-lora": [
 		"text-generation"
 	],
 	"@cf/google/gemma-4-26b-a4b-it": [
-		"text-generation"
-	],
-	"@cf/qwen/qwen1.5-1.8b-chat": [
 		"text-generation"
 	],
 	"@cf/mistralai/mistral-small-3.1-24b-instruct": [
@@ -559,12 +457,6 @@ export const MODEL_CAPABILITIES = {
 	],
 	"@cf/leonardo/lucid-origin": [
 		"image-generation"
-	],
-	"@cf/qwen/qwen1.5-14b-chat-awq": [
-		"text-generation"
-	],
-	"@cf/openchat/openchat-3.5-0106": [
-		"text-generation"
 	],
 	"@cf/meta/llama-4-scout-17b-16e-instruct": [
 		"text-generation"
