@@ -1,7 +1,7 @@
 // Unified models configuration for Cloudflare Workers AI
 // This file contains all supported models organized by category with context windows
 //
-// Auto-generated on: 2026-05-25T12:37:46.164Z
+// Auto-generated on: 2026-06-01T15:29:41.800Z
 // To update: npm run update-models
 
 // === CONTEXT WINDOW MAPPING ===
@@ -12,26 +12,20 @@ export const MODEL_CONTEXT_WINDOWS = {
 	"@cf/huggingface/distilbert-sst-2-int8": 4096,
 	"@cf/google/gemma-2b-it-lora": 8192,
 	"@cf/black-forest-labs/flux-2-klein-9b": 4096,
-	"@cf/meta/llama-3-8b-instruct": 8192,
 	"@cf/meta/llama-3.2-3b-instruct": 128000,
-	"@cf/moonshotai/kimi-k2.5": 4096,
 	"@cf/meta/llama-guard-3-8b": 4096,
 	"@cf/qwen/qwen3-embedding-0.6b": 4096,
-	"@cf/meta/llama-2-7b-chat-fp16": 4096,
-	"@cf/mistral/mistral-7b-instruct-v0.1": 8192,
 	"@cf/myshell-ai/melotts": 4096,
 	"@cf/mistral/mistral-7b-instruct-v0.2-lora": 32768,
 	"@cf/deepgram/aura-2-es": 4096,
 	"@cf/openai/whisper": 30,
 	"@cf/pfnet/plamo-embedding-1b": 4096,
-	"@hf/mistral/mistral-7b-instruct-v0.2": 4096,
 	"@cf/llava-hf/llava-1.5-7b-hf": 4096,
 	"@cf/deepseek-ai/deepseek-r1-distill-qwen-32b": 4096,
 	"@cf/runwayml/stable-diffusion-v1-5-inpainting": 4096,
 	"@cf/deepgram/flux": 4096,
 	"@cf/deepgram/nova-3": 4096,
 	"@cf/black-forest-labs/flux-1-schnell": 77,
-	"@cf/meta/llama-2-7b-chat-int8": 4096,
 	"@cf/meta/llama-3.1-8b-instruct-fp8": 128000,
 	"@cf/meta/llama-3.2-1b-instruct": 60000,
 	"@cf/moonshotai/kimi-k2.6": 4096,
@@ -49,33 +43,24 @@ export const MODEL_CONTEXT_WINDOWS = {
 	"@cf/black-forest-labs/flux-2-klein-4b": 4096,
 	"@cf/baai/bge-small-en-v1.5": 512,
 	"@cf/qwen/qwen2.5-coder-32b-instruct": 32768,
-	"@hf/nousresearch/hermes-2-pro-mistral-7b": 4096,
 	"@cf/nvidia/nemotron-3-120b-a12b": 4096,
 	"@cf/baai/bge-base-en-v1.5": 512,
 	"@cf/aisingapore/gemma-sea-lion-v4-27b-it": 4096,
 	"@cf/qwen/qwen3-30b-a3b-fp8": 4096,
-	"@cf/meta/llama-3.1-8b-instruct-awq": 128000,
-	"@cf/unum/uform-gen2-qwen-500m": 4096,
 	"@cf/black-forest-labs/flux-2-dev": 4096,
 	"@cf/google/gemma-7b-it-lora": 8192,
 	"@cf/google/gemma-4-26b-a4b-it": 4096,
 	"@cf/mistralai/mistral-small-3.1-24b-instruct": 128000,
-	"@cf/meta/llama-3-8b-instruct-awq": 8192,
 	"@cf/meta/llama-3.2-11b-vision-instruct": 128000,
 	"@cf/openai/whisper-tiny-en": 30,
 	"@cf/openai/whisper-large-v3-turbo": 30,
 	"@cf/deepgram/aura-1": 4096,
-	"@cf/defog/sqlcoder-7b-2": 4096,
-	"@cf/microsoft/phi-2": 4096,
-	"@cf/facebook/bart-large-cnn": 4096,
 	"@cf/runwayml/stable-diffusion-v1-5-img2img": 4096,
 	"@cf/openai/gpt-oss-20b": 4096,
 	"@cf/google/embeddinggemma-300m": 4096,
 	"@cf/baai/bge-reranker-base": 4096,
-	"@hf/google/gemma-7b-it": 4096,
 	"@cf/leonardo/lucid-origin": 4096,
 	"@cf/meta/llama-4-scout-17b-16e-instruct": 131072,
-	"@cf/google/gemma-3-12b-it": 128000,
 	"@cf/qwen/qwq-32b": 32768,
 	"@cf/baai/bge-large-en-v1.5": 512,
 	"@cf/deepgram/aura-2-en": 4096
@@ -86,16 +71,10 @@ export const MODEL_CATEGORIES = {
 	"chat": [
 		"@cf/openai/gpt-oss-120b",
 		"@cf/google/gemma-2b-it-lora",
-		"@cf/meta/llama-3-8b-instruct",
 		"@cf/meta/llama-3.2-3b-instruct",
-		"@cf/moonshotai/kimi-k2.5",
 		"@cf/meta/llama-guard-3-8b",
-		"@cf/meta/llama-2-7b-chat-fp16",
-		"@cf/mistral/mistral-7b-instruct-v0.1",
 		"@cf/mistral/mistral-7b-instruct-v0.2-lora",
-		"@hf/mistral/mistral-7b-instruct-v0.2",
 		"@cf/deepseek-ai/deepseek-r1-distill-qwen-32b",
-		"@cf/meta/llama-2-7b-chat-int8",
 		"@cf/meta/llama-3.1-8b-instruct-fp8",
 		"@cf/meta/llama-3.2-1b-instruct",
 		"@cf/moonshotai/kimi-k2.6",
@@ -104,38 +83,24 @@ export const MODEL_CATEGORIES = {
 		"@cf/meta/llama-3.3-70b-instruct-fp8-fast",
 		"@cf/ibm-granite/granite-4.0-h-micro",
 		"@cf/qwen/qwen2.5-coder-32b-instruct",
-		"@hf/nousresearch/hermes-2-pro-mistral-7b",
 		"@cf/nvidia/nemotron-3-120b-a12b",
 		"@cf/aisingapore/gemma-sea-lion-v4-27b-it",
 		"@cf/qwen/qwen3-30b-a3b-fp8",
-		"@cf/meta/llama-3.1-8b-instruct-awq",
 		"@cf/google/gemma-7b-it-lora",
 		"@cf/google/gemma-4-26b-a4b-it",
 		"@cf/mistralai/mistral-small-3.1-24b-instruct",
-		"@cf/meta/llama-3-8b-instruct-awq",
 		"@cf/meta/llama-3.2-11b-vision-instruct",
-		"@cf/defog/sqlcoder-7b-2",
-		"@cf/microsoft/phi-2",
-		"@cf/facebook/bart-large-cnn",
 		"@cf/openai/gpt-oss-20b",
-		"@hf/google/gemma-7b-it",
 		"@cf/meta/llama-4-scout-17b-16e-instruct",
-		"@cf/google/gemma-3-12b-it",
 		"@cf/qwen/qwq-32b"
 	],
 	"completion": [
 		"@cf/openai/gpt-oss-120b",
 		"@cf/google/gemma-2b-it-lora",
-		"@cf/meta/llama-3-8b-instruct",
 		"@cf/meta/llama-3.2-3b-instruct",
-		"@cf/moonshotai/kimi-k2.5",
 		"@cf/meta/llama-guard-3-8b",
-		"@cf/meta/llama-2-7b-chat-fp16",
-		"@cf/mistral/mistral-7b-instruct-v0.1",
 		"@cf/mistral/mistral-7b-instruct-v0.2-lora",
-		"@hf/mistral/mistral-7b-instruct-v0.2",
 		"@cf/deepseek-ai/deepseek-r1-distill-qwen-32b",
-		"@cf/meta/llama-2-7b-chat-int8",
 		"@cf/meta/llama-3.1-8b-instruct-fp8",
 		"@cf/meta/llama-3.2-1b-instruct",
 		"@cf/moonshotai/kimi-k2.6",
@@ -144,23 +109,15 @@ export const MODEL_CATEGORIES = {
 		"@cf/meta/llama-3.3-70b-instruct-fp8-fast",
 		"@cf/ibm-granite/granite-4.0-h-micro",
 		"@cf/qwen/qwen2.5-coder-32b-instruct",
-		"@hf/nousresearch/hermes-2-pro-mistral-7b",
 		"@cf/nvidia/nemotron-3-120b-a12b",
 		"@cf/aisingapore/gemma-sea-lion-v4-27b-it",
 		"@cf/qwen/qwen3-30b-a3b-fp8",
-		"@cf/meta/llama-3.1-8b-instruct-awq",
 		"@cf/google/gemma-7b-it-lora",
 		"@cf/google/gemma-4-26b-a4b-it",
 		"@cf/mistralai/mistral-small-3.1-24b-instruct",
-		"@cf/meta/llama-3-8b-instruct-awq",
 		"@cf/meta/llama-3.2-11b-vision-instruct",
-		"@cf/defog/sqlcoder-7b-2",
-		"@cf/microsoft/phi-2",
-		"@cf/facebook/bart-large-cnn",
 		"@cf/openai/gpt-oss-20b",
-		"@hf/google/gemma-7b-it",
 		"@cf/meta/llama-4-scout-17b-16e-instruct",
-		"@cf/google/gemma-3-12b-it",
 		"@cf/qwen/qwq-32b"
 	],
 	"embeddings": [
@@ -203,8 +160,7 @@ export const MODEL_CATEGORIES = {
 		"@cf/leonardo/lucid-origin"
 	],
 	"vision": [
-		"@cf/llava-hf/llava-1.5-7b-hf",
-		"@cf/unum/uform-gen2-qwen-500m"
+		"@cf/llava-hf/llava-1.5-7b-hf"
 	],
 	"classification": [
 		"@cf/huggingface/distilbert-sst-2-int8",
@@ -272,13 +228,7 @@ export const MODEL_CAPABILITIES = {
 	"@cf/black-forest-labs/flux-2-klein-9b": [
 		"image-generation"
 	],
-	"@cf/meta/llama-3-8b-instruct": [
-		"text-generation"
-	],
 	"@cf/meta/llama-3.2-3b-instruct": [
-		"text-generation"
-	],
-	"@cf/moonshotai/kimi-k2.5": [
 		"text-generation"
 	],
 	"@cf/meta/llama-guard-3-8b": [
@@ -286,12 +236,6 @@ export const MODEL_CAPABILITIES = {
 	],
 	"@cf/qwen/qwen3-embedding-0.6b": [
 		"embeddings"
-	],
-	"@cf/meta/llama-2-7b-chat-fp16": [
-		"text-generation"
-	],
-	"@cf/mistral/mistral-7b-instruct-v0.1": [
-		"text-generation"
 	],
 	"@cf/myshell-ai/melotts": [
 		"text-to-speech"
@@ -307,9 +251,6 @@ export const MODEL_CAPABILITIES = {
 	],
 	"@cf/pfnet/plamo-embedding-1b": [
 		"embeddings"
-	],
-	"@hf/mistral/mistral-7b-instruct-v0.2": [
-		"text-generation"
 	],
 	"@cf/llava-hf/llava-1.5-7b-hf": [
 		"vision"
@@ -328,9 +269,6 @@ export const MODEL_CAPABILITIES = {
 	],
 	"@cf/black-forest-labs/flux-1-schnell": [
 		"image-generation"
-	],
-	"@cf/meta/llama-2-7b-chat-int8": [
-		"text-generation"
 	],
 	"@cf/meta/llama-3.1-8b-instruct-fp8": [
 		"text-generation"
@@ -383,9 +321,6 @@ export const MODEL_CAPABILITIES = {
 	"@cf/qwen/qwen2.5-coder-32b-instruct": [
 		"text-generation"
 	],
-	"@hf/nousresearch/hermes-2-pro-mistral-7b": [
-		"text-generation"
-	],
 	"@cf/nvidia/nemotron-3-120b-a12b": [
 		"text-generation"
 	],
@@ -398,12 +333,6 @@ export const MODEL_CAPABILITIES = {
 	"@cf/qwen/qwen3-30b-a3b-fp8": [
 		"text-generation"
 	],
-	"@cf/meta/llama-3.1-8b-instruct-awq": [
-		"text-generation"
-	],
-	"@cf/unum/uform-gen2-qwen-500m": [
-		"vision"
-	],
 	"@cf/black-forest-labs/flux-2-dev": [
 		"image-generation"
 	],
@@ -414,9 +343,6 @@ export const MODEL_CAPABILITIES = {
 		"text-generation"
 	],
 	"@cf/mistralai/mistral-small-3.1-24b-instruct": [
-		"text-generation"
-	],
-	"@cf/meta/llama-3-8b-instruct-awq": [
 		"text-generation"
 	],
 	"@cf/meta/llama-3.2-11b-vision-instruct": [
@@ -431,15 +357,6 @@ export const MODEL_CAPABILITIES = {
 	"@cf/deepgram/aura-1": [
 		"text-to-speech"
 	],
-	"@cf/defog/sqlcoder-7b-2": [
-		"text-generation"
-	],
-	"@cf/microsoft/phi-2": [
-		"text-generation"
-	],
-	"@cf/facebook/bart-large-cnn": [
-		"summarization"
-	],
 	"@cf/runwayml/stable-diffusion-v1-5-img2img": [
 		"image-generation"
 	],
@@ -452,16 +369,10 @@ export const MODEL_CAPABILITIES = {
 	"@cf/baai/bge-reranker-base": [
 		"text-classification"
 	],
-	"@hf/google/gemma-7b-it": [
-		"text-generation"
-	],
 	"@cf/leonardo/lucid-origin": [
 		"image-generation"
 	],
 	"@cf/meta/llama-4-scout-17b-16e-instruct": [
-		"text-generation"
-	],
-	"@cf/google/gemma-3-12b-it": [
 		"text-generation"
 	],
 	"@cf/qwen/qwq-32b": [
