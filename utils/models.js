@@ -1,7 +1,7 @@
 // Unified models configuration for Cloudflare Workers AI
 // This file contains all supported models organized by category with context windows
 //
-// Auto-generated on: 2026-06-01T15:29:41.800Z
+// Auto-generated on: 2026-06-15T15:21:30.414Z
 // To update: npm run update-models
 
 // === CONTEXT WINDOW MAPPING ===
@@ -18,6 +18,7 @@ export const MODEL_CONTEXT_WINDOWS = {
 	"@cf/myshell-ai/melotts": 4096,
 	"@cf/mistral/mistral-7b-instruct-v0.2-lora": 32768,
 	"@cf/deepgram/aura-2-es": 4096,
+	"@cf/moonshotai/kimi-k2.7-code": 4096,
 	"@cf/openai/whisper": 30,
 	"@cf/pfnet/plamo-embedding-1b": 4096,
 	"@cf/llava-hf/llava-1.5-7b-hf": 4096,
@@ -74,6 +75,7 @@ export const MODEL_CATEGORIES = {
 		"@cf/meta/llama-3.2-3b-instruct",
 		"@cf/meta/llama-guard-3-8b",
 		"@cf/mistral/mistral-7b-instruct-v0.2-lora",
+		"@cf/moonshotai/kimi-k2.7-code",
 		"@cf/deepseek-ai/deepseek-r1-distill-qwen-32b",
 		"@cf/meta/llama-3.1-8b-instruct-fp8",
 		"@cf/meta/llama-3.2-1b-instruct",
@@ -100,6 +102,7 @@ export const MODEL_CATEGORIES = {
 		"@cf/meta/llama-3.2-3b-instruct",
 		"@cf/meta/llama-guard-3-8b",
 		"@cf/mistral/mistral-7b-instruct-v0.2-lora",
+		"@cf/moonshotai/kimi-k2.7-code",
 		"@cf/deepseek-ai/deepseek-r1-distill-qwen-32b",
 		"@cf/meta/llama-3.1-8b-instruct-fp8",
 		"@cf/meta/llama-3.2-1b-instruct",
@@ -245,6 +248,9 @@ export const MODEL_CAPABILITIES = {
 	],
 	"@cf/deepgram/aura-2-es": [
 		"text-to-speech"
+	],
+	"@cf/moonshotai/kimi-k2.7-code": [
+		"text-generation"
 	],
 	"@cf/openai/whisper": [
 		"speech-to-text"
