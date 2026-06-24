@@ -1,7 +1,7 @@
 // Unified models configuration for Cloudflare Workers AI
 // This file contains all supported models organized by category with context windows
 //
-// Auto-generated on: 2026-06-15T15:21:30.414Z
+// Auto-generated on: 2026-06-22T14:47:12.814Z
 // To update: npm run update-models
 
 // === CONTEXT WINDOW MAPPING ===
@@ -44,6 +44,7 @@ export const MODEL_CONTEXT_WINDOWS = {
 	"@cf/black-forest-labs/flux-2-klein-4b": 4096,
 	"@cf/baai/bge-small-en-v1.5": 512,
 	"@cf/qwen/qwen2.5-coder-32b-instruct": 32768,
+	"@cf/zai-org/glm-5.2": 4096,
 	"@cf/nvidia/nemotron-3-120b-a12b": 4096,
 	"@cf/baai/bge-base-en-v1.5": 512,
 	"@cf/aisingapore/gemma-sea-lion-v4-27b-it": 4096,
@@ -85,6 +86,7 @@ export const MODEL_CATEGORIES = {
 		"@cf/meta/llama-3.3-70b-instruct-fp8-fast",
 		"@cf/ibm-granite/granite-4.0-h-micro",
 		"@cf/qwen/qwen2.5-coder-32b-instruct",
+		"@cf/zai-org/glm-5.2",
 		"@cf/nvidia/nemotron-3-120b-a12b",
 		"@cf/aisingapore/gemma-sea-lion-v4-27b-it",
 		"@cf/qwen/qwen3-30b-a3b-fp8",
@@ -112,6 +114,7 @@ export const MODEL_CATEGORIES = {
 		"@cf/meta/llama-3.3-70b-instruct-fp8-fast",
 		"@cf/ibm-granite/granite-4.0-h-micro",
 		"@cf/qwen/qwen2.5-coder-32b-instruct",
+		"@cf/zai-org/glm-5.2",
 		"@cf/nvidia/nemotron-3-120b-a12b",
 		"@cf/aisingapore/gemma-sea-lion-v4-27b-it",
 		"@cf/qwen/qwen3-30b-a3b-fp8",
@@ -325,6 +328,9 @@ export const MODEL_CAPABILITIES = {
 		"embeddings"
 	],
 	"@cf/qwen/qwen2.5-coder-32b-instruct": [
+		"text-generation"
+	],
+	"@cf/zai-org/glm-5.2": [
 		"text-generation"
 	],
 	"@cf/nvidia/nemotron-3-120b-a12b": [
