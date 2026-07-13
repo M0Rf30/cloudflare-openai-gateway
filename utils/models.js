@@ -1,7 +1,7 @@
 // Unified models configuration for Cloudflare Workers AI
 // This file contains all supported models organized by category with context windows
 //
-// Auto-generated on: 2026-06-22T14:47:12.814Z
+// Auto-generated on: 2026-07-13T12:13:14.042Z
 // To update: npm run update-models
 
 // === CONTEXT WINDOW MAPPING ===
@@ -61,6 +61,7 @@ export const MODEL_CONTEXT_WINDOWS = {
 	"@cf/openai/gpt-oss-20b": 4096,
 	"@cf/google/embeddinggemma-300m": 4096,
 	"@cf/baai/bge-reranker-base": 4096,
+	"@cf/moondream/moondream3.1-9B-A2B": 4096,
 	"@cf/leonardo/lucid-origin": 4096,
 	"@cf/meta/llama-4-scout-17b-16e-instruct": 131072,
 	"@cf/qwen/qwq-32b": 32768,
@@ -166,7 +167,8 @@ export const MODEL_CATEGORIES = {
 		"@cf/leonardo/lucid-origin"
 	],
 	"vision": [
-		"@cf/llava-hf/llava-1.5-7b-hf"
+		"@cf/llava-hf/llava-1.5-7b-hf",
+		"@cf/moondream/moondream3.1-9B-A2B"
 	],
 	"classification": [
 		"@cf/huggingface/distilbert-sst-2-int8",
@@ -380,6 +382,9 @@ export const MODEL_CAPABILITIES = {
 	],
 	"@cf/baai/bge-reranker-base": [
 		"text-classification"
+	],
+	"@cf/moondream/moondream3.1-9B-A2B": [
+		"vision"
 	],
 	"@cf/leonardo/lucid-origin": [
 		"image-generation"
