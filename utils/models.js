@@ -1,7 +1,7 @@
 // Unified models configuration for Cloudflare Workers AI
 // This file contains all supported models organized by category with context windows
 //
-// Auto-generated on: 2026-07-13T12:13:14.042Z
+// Auto-generated on: 2026-07-27T12:32:03.845Z
 // To update: npm run update-models
 
 // === CONTEXT WINDOW MAPPING ===
