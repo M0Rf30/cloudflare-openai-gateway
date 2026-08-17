@@ -1,7 +1,7 @@
 // Unified models configuration for Cloudflare Workers AI
 // This file contains all supported models organized by category with context windows
 //
-// Auto-generated on: 2026-07-13T12:13:14.042Z
+// Auto-generated on: 2026-08-17T09:50:19.620Z
 // To update: npm run update-models
 
 // === CONTEXT WINDOW MAPPING ===
@@ -37,6 +37,7 @@ export const MODEL_CONTEXT_WINDOWS = {
 	"@cf/meta/llama-3.3-70b-instruct-fp8-fast": 24000,
 	"@cf/ibm-granite/granite-4.0-h-micro": 4096,
 	"@cf/lykon/dreamshaper-8-lcm": 4096,
+	"@cf/deepseek-ai/deepseek-v4-flash-0731": 4096,
 	"@cf/leonardo/phoenix-1.0": 4096,
 	"@cf/stabilityai/stable-diffusion-xl-base-1.0": 4096,
 	"@cf/meta/m2m100-1.2b": 4096,
@@ -53,6 +54,7 @@ export const MODEL_CONTEXT_WINDOWS = {
 	"@cf/google/gemma-7b-it-lora": 8192,
 	"@cf/google/gemma-4-26b-a4b-it": 4096,
 	"@cf/mistralai/mistral-small-3.1-24b-instruct": 128000,
+	"@cf/deepseek-ai/deepseek-v4-pro-0813": 4096,
 	"@cf/meta/llama-3.2-11b-vision-instruct": 128000,
 	"@cf/openai/whisper-tiny-en": 30,
 	"@cf/openai/whisper-large-v3-turbo": 30,
@@ -86,6 +88,7 @@ export const MODEL_CATEGORIES = {
 		"@cf/meta-llama/llama-2-7b-chat-hf-lora",
 		"@cf/meta/llama-3.3-70b-instruct-fp8-fast",
 		"@cf/ibm-granite/granite-4.0-h-micro",
+		"@cf/deepseek-ai/deepseek-v4-flash-0731",
 		"@cf/qwen/qwen2.5-coder-32b-instruct",
 		"@cf/zai-org/glm-5.2",
 		"@cf/nvidia/nemotron-3-120b-a12b",
@@ -94,6 +97,7 @@ export const MODEL_CATEGORIES = {
 		"@cf/google/gemma-7b-it-lora",
 		"@cf/google/gemma-4-26b-a4b-it",
 		"@cf/mistralai/mistral-small-3.1-24b-instruct",
+		"@cf/deepseek-ai/deepseek-v4-pro-0813",
 		"@cf/meta/llama-3.2-11b-vision-instruct",
 		"@cf/openai/gpt-oss-20b",
 		"@cf/meta/llama-4-scout-17b-16e-instruct",
@@ -114,6 +118,7 @@ export const MODEL_CATEGORIES = {
 		"@cf/meta-llama/llama-2-7b-chat-hf-lora",
 		"@cf/meta/llama-3.3-70b-instruct-fp8-fast",
 		"@cf/ibm-granite/granite-4.0-h-micro",
+		"@cf/deepseek-ai/deepseek-v4-flash-0731",
 		"@cf/qwen/qwen2.5-coder-32b-instruct",
 		"@cf/zai-org/glm-5.2",
 		"@cf/nvidia/nemotron-3-120b-a12b",
@@ -122,6 +127,7 @@ export const MODEL_CATEGORIES = {
 		"@cf/google/gemma-7b-it-lora",
 		"@cf/google/gemma-4-26b-a4b-it",
 		"@cf/mistralai/mistral-small-3.1-24b-instruct",
+		"@cf/deepseek-ai/deepseek-v4-pro-0813",
 		"@cf/meta/llama-3.2-11b-vision-instruct",
 		"@cf/openai/gpt-oss-20b",
 		"@cf/meta/llama-4-scout-17b-16e-instruct",
@@ -311,6 +317,9 @@ export const MODEL_CAPABILITIES = {
 	"@cf/lykon/dreamshaper-8-lcm": [
 		"image-generation"
 	],
+	"@cf/deepseek-ai/deepseek-v4-flash-0731": [
+		"text-generation"
+	],
 	"@cf/leonardo/phoenix-1.0": [
 		"image-generation"
 	],
@@ -357,6 +366,9 @@ export const MODEL_CAPABILITIES = {
 		"text-generation"
 	],
 	"@cf/mistralai/mistral-small-3.1-24b-instruct": [
+		"text-generation"
+	],
+	"@cf/deepseek-ai/deepseek-v4-pro-0813": [
 		"text-generation"
 	],
 	"@cf/meta/llama-3.2-11b-vision-instruct": [
