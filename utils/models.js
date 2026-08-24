@@ -1,7 +1,7 @@
 // Unified models configuration for Cloudflare Workers AI
 // This file contains all supported models organized by category with context windows
 //
-// Auto-generated on: 2026-08-17T09:50:19.620Z
+// Auto-generated on: 2026-08-24T09:55:16.644Z
 // To update: npm run update-models
 
 // === CONTEXT WINDOW MAPPING ===
@@ -56,6 +56,7 @@ export const MODEL_CONTEXT_WINDOWS = {
 	"@cf/mistralai/mistral-small-3.1-24b-instruct": 128000,
 	"@cf/deepseek-ai/deepseek-v4-pro-0813": 4096,
 	"@cf/meta/llama-3.2-11b-vision-instruct": 128000,
+	"@cf/qwen/qwen3.8-27b": 4096,
 	"@cf/openai/whisper-tiny-en": 30,
 	"@cf/openai/whisper-large-v3-turbo": 30,
 	"@cf/deepgram/aura-1": 4096,
@@ -99,6 +100,7 @@ export const MODEL_CATEGORIES = {
 		"@cf/mistralai/mistral-small-3.1-24b-instruct",
 		"@cf/deepseek-ai/deepseek-v4-pro-0813",
 		"@cf/meta/llama-3.2-11b-vision-instruct",
+		"@cf/qwen/qwen3.8-27b",
 		"@cf/openai/gpt-oss-20b",
 		"@cf/meta/llama-4-scout-17b-16e-instruct",
 		"@cf/qwen/qwq-32b"
@@ -129,6 +131,7 @@ export const MODEL_CATEGORIES = {
 		"@cf/mistralai/mistral-small-3.1-24b-instruct",
 		"@cf/deepseek-ai/deepseek-v4-pro-0813",
 		"@cf/meta/llama-3.2-11b-vision-instruct",
+		"@cf/qwen/qwen3.8-27b",
 		"@cf/openai/gpt-oss-20b",
 		"@cf/meta/llama-4-scout-17b-16e-instruct",
 		"@cf/qwen/qwq-32b"
@@ -372,6 +375,9 @@ export const MODEL_CAPABILITIES = {
 		"text-generation"
 	],
 	"@cf/meta/llama-3.2-11b-vision-instruct": [
+		"text-generation"
+	],
+	"@cf/qwen/qwen3.8-27b": [
 		"text-generation"
 	],
 	"@cf/openai/whisper-tiny-en": [
