@@ -1,7 +1,7 @@
 // Unified models configuration for Cloudflare Workers AI
 // This file contains all supported models organized by category with context windows
 //
-// Auto-generated on: 2026-08-24T09:55:16.644Z
+// Auto-generated on: 2026-08-31T16:59:39.313Z
 // To update: npm run update-models
 
 // === CONTEXT WINDOW MAPPING ===
@@ -20,6 +20,7 @@ export const MODEL_CONTEXT_WINDOWS = {
 	"@cf/deepgram/aura-2-es": 4096,
 	"@cf/moonshotai/kimi-k2.7-code": 4096,
 	"@cf/openai/whisper": 30,
+	"@cf/zai-org/glm-5.3": 4096,
 	"@cf/pfnet/plamo-embedding-1b": 4096,
 	"@cf/llava-hf/llava-1.5-7b-hf": 4096,
 	"@cf/deepseek-ai/deepseek-r1-distill-qwen-32b": 4096,
@@ -28,6 +29,7 @@ export const MODEL_CONTEXT_WINDOWS = {
 	"@cf/deepgram/nova-3": 4096,
 	"@cf/black-forest-labs/flux-1-schnell": 77,
 	"@cf/meta/llama-3.1-8b-instruct-fp8": 128000,
+	"@cf/zai-org/glm-5.3-flash": 4096,
 	"@cf/meta/llama-3.2-1b-instruct": 60000,
 	"@cf/moonshotai/kimi-k2.6": 4096,
 	"@cf/zai-org/glm-4.7-flash": 4096,
@@ -60,7 +62,6 @@ export const MODEL_CONTEXT_WINDOWS = {
 	"@cf/openai/whisper-tiny-en": 30,
 	"@cf/openai/whisper-large-v3-turbo": 30,
 	"@cf/deepgram/aura-1": 4096,
-	"@cf/runwayml/stable-diffusion-v1-5-img2img": 4096,
 	"@cf/openai/gpt-oss-20b": 4096,
 	"@cf/google/embeddinggemma-300m": 4096,
 	"@cf/baai/bge-reranker-base": 4096,
@@ -81,8 +82,10 @@ export const MODEL_CATEGORIES = {
 		"@cf/meta/llama-guard-3-8b",
 		"@cf/mistral/mistral-7b-instruct-v0.2-lora",
 		"@cf/moonshotai/kimi-k2.7-code",
+		"@cf/zai-org/glm-5.3",
 		"@cf/deepseek-ai/deepseek-r1-distill-qwen-32b",
 		"@cf/meta/llama-3.1-8b-instruct-fp8",
+		"@cf/zai-org/glm-5.3-flash",
 		"@cf/meta/llama-3.2-1b-instruct",
 		"@cf/moonshotai/kimi-k2.6",
 		"@cf/zai-org/glm-4.7-flash",
@@ -112,8 +115,10 @@ export const MODEL_CATEGORIES = {
 		"@cf/meta/llama-guard-3-8b",
 		"@cf/mistral/mistral-7b-instruct-v0.2-lora",
 		"@cf/moonshotai/kimi-k2.7-code",
+		"@cf/zai-org/glm-5.3",
 		"@cf/deepseek-ai/deepseek-r1-distill-qwen-32b",
 		"@cf/meta/llama-3.1-8b-instruct-fp8",
+		"@cf/zai-org/glm-5.3-flash",
 		"@cf/meta/llama-3.2-1b-instruct",
 		"@cf/moonshotai/kimi-k2.6",
 		"@cf/zai-org/glm-4.7-flash",
@@ -172,7 +177,6 @@ export const MODEL_CATEGORIES = {
 		"@cf/stabilityai/stable-diffusion-xl-base-1.0",
 		"@cf/black-forest-labs/flux-2-klein-4b",
 		"@cf/black-forest-labs/flux-2-dev",
-		"@cf/runwayml/stable-diffusion-v1-5-img2img",
 		"@cf/leonardo/lucid-origin"
 	],
 	"vision": [
@@ -269,6 +273,9 @@ export const MODEL_CAPABILITIES = {
 	"@cf/openai/whisper": [
 		"speech-to-text"
 	],
+	"@cf/zai-org/glm-5.3": [
+		"text-generation"
+	],
 	"@cf/pfnet/plamo-embedding-1b": [
 		"embeddings"
 	],
@@ -291,6 +298,9 @@ export const MODEL_CAPABILITIES = {
 		"image-generation"
 	],
 	"@cf/meta/llama-3.1-8b-instruct-fp8": [
+		"text-generation"
+	],
+	"@cf/zai-org/glm-5.3-flash": [
 		"text-generation"
 	],
 	"@cf/meta/llama-3.2-1b-instruct": [
@@ -388,9 +398,6 @@ export const MODEL_CAPABILITIES = {
 	],
 	"@cf/deepgram/aura-1": [
 		"text-to-speech"
-	],
-	"@cf/runwayml/stable-diffusion-v1-5-img2img": [
-		"image-generation"
 	],
 	"@cf/openai/gpt-oss-20b": [
 		"text-generation"
