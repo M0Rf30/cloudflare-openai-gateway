@@ -1,7 +1,7 @@
 // Unified models configuration for Cloudflare Workers AI
 // This file contains all supported models organized by category with context windows
 //
-// Auto-generated on: 2026-08-31T16:59:39.313Z
+// Auto-generated on: 2026-10-05T18:15:49.151Z
 // To update: npm run update-models
 
 // === CONTEXT WINDOW MAPPING ===
@@ -21,6 +21,7 @@ export const MODEL_CONTEXT_WINDOWS = {
 	"@cf/moonshotai/kimi-k2.7-code": 4096,
 	"@cf/openai/whisper": 30,
 	"@cf/zai-org/glm-5.3": 4096,
+	"@cf/utter-project/eurollm-9b-it": 4096,
 	"@cf/pfnet/plamo-embedding-1b": 4096,
 	"@cf/llava-hf/llava-1.5-7b-hf": 4096,
 	"@cf/deepseek-ai/deepseek-r1-distill-qwen-32b": 4096,
@@ -32,6 +33,7 @@ export const MODEL_CONTEXT_WINDOWS = {
 	"@cf/zai-org/glm-5.3-flash": 4096,
 	"@cf/meta/llama-3.2-1b-instruct": 60000,
 	"@cf/moonshotai/kimi-k2.6": 4096,
+	"@cf/cloudflare/clef": 4096,
 	"@cf/zai-org/glm-4.7-flash": 4096,
 	"@cf/microsoft/resnet-50": 4096,
 	"@cf/bytedance/stable-diffusion-xl-lightning": 77,
@@ -46,6 +48,7 @@ export const MODEL_CONTEXT_WINDOWS = {
 	"@cf/ai4bharat/indictrans2-en-indic-1B": 4096,
 	"@cf/black-forest-labs/flux-2-klein-4b": 4096,
 	"@cf/baai/bge-small-en-v1.5": 512,
+	"@cf/swiss-ai/apertus-v1.5-8b": 4096,
 	"@cf/qwen/qwen2.5-coder-32b-instruct": 32768,
 	"@cf/zai-org/glm-5.2": 4096,
 	"@cf/nvidia/nemotron-3-120b-a12b": 4096,
@@ -68,6 +71,7 @@ export const MODEL_CONTEXT_WINDOWS = {
 	"@cf/moondream/moondream3.1-9B-A2B": 4096,
 	"@cf/leonardo/lucid-origin": 4096,
 	"@cf/meta/llama-4-scout-17b-16e-instruct": 131072,
+	"@cf/cloudflare/clef-flash": 4096,
 	"@cf/qwen/qwq-32b": 32768,
 	"@cf/baai/bge-large-en-v1.5": 512,
 	"@cf/deepgram/aura-2-en": 4096
@@ -83,16 +87,19 @@ export const MODEL_CATEGORIES = {
 		"@cf/mistral/mistral-7b-instruct-v0.2-lora",
 		"@cf/moonshotai/kimi-k2.7-code",
 		"@cf/zai-org/glm-5.3",
+		"@cf/utter-project/eurollm-9b-it",
 		"@cf/deepseek-ai/deepseek-r1-distill-qwen-32b",
 		"@cf/meta/llama-3.1-8b-instruct-fp8",
 		"@cf/zai-org/glm-5.3-flash",
 		"@cf/meta/llama-3.2-1b-instruct",
 		"@cf/moonshotai/kimi-k2.6",
+		"@cf/cloudflare/clef",
 		"@cf/zai-org/glm-4.7-flash",
 		"@cf/meta-llama/llama-2-7b-chat-hf-lora",
 		"@cf/meta/llama-3.3-70b-instruct-fp8-fast",
 		"@cf/ibm-granite/granite-4.0-h-micro",
 		"@cf/deepseek-ai/deepseek-v4-flash-0731",
+		"@cf/swiss-ai/apertus-v1.5-8b",
 		"@cf/qwen/qwen2.5-coder-32b-instruct",
 		"@cf/zai-org/glm-5.2",
 		"@cf/nvidia/nemotron-3-120b-a12b",
@@ -106,6 +113,7 @@ export const MODEL_CATEGORIES = {
 		"@cf/qwen/qwen3.8-27b",
 		"@cf/openai/gpt-oss-20b",
 		"@cf/meta/llama-4-scout-17b-16e-instruct",
+		"@cf/cloudflare/clef-flash",
 		"@cf/qwen/qwq-32b"
 	],
 	"completion": [
@@ -116,16 +124,19 @@ export const MODEL_CATEGORIES = {
 		"@cf/mistral/mistral-7b-instruct-v0.2-lora",
 		"@cf/moonshotai/kimi-k2.7-code",
 		"@cf/zai-org/glm-5.3",
+		"@cf/utter-project/eurollm-9b-it",
 		"@cf/deepseek-ai/deepseek-r1-distill-qwen-32b",
 		"@cf/meta/llama-3.1-8b-instruct-fp8",
 		"@cf/zai-org/glm-5.3-flash",
 		"@cf/meta/llama-3.2-1b-instruct",
 		"@cf/moonshotai/kimi-k2.6",
+		"@cf/cloudflare/clef",
 		"@cf/zai-org/glm-4.7-flash",
 		"@cf/meta-llama/llama-2-7b-chat-hf-lora",
 		"@cf/meta/llama-3.3-70b-instruct-fp8-fast",
 		"@cf/ibm-granite/granite-4.0-h-micro",
 		"@cf/deepseek-ai/deepseek-v4-flash-0731",
+		"@cf/swiss-ai/apertus-v1.5-8b",
 		"@cf/qwen/qwen2.5-coder-32b-instruct",
 		"@cf/zai-org/glm-5.2",
 		"@cf/nvidia/nemotron-3-120b-a12b",
@@ -139,6 +150,7 @@ export const MODEL_CATEGORIES = {
 		"@cf/qwen/qwen3.8-27b",
 		"@cf/openai/gpt-oss-20b",
 		"@cf/meta/llama-4-scout-17b-16e-instruct",
+		"@cf/cloudflare/clef-flash",
 		"@cf/qwen/qwq-32b"
 	],
 	"embeddings": [
@@ -276,6 +288,9 @@ export const MODEL_CAPABILITIES = {
 	"@cf/zai-org/glm-5.3": [
 		"text-generation"
 	],
+	"@cf/utter-project/eurollm-9b-it": [
+		"text-generation"
+	],
 	"@cf/pfnet/plamo-embedding-1b": [
 		"embeddings"
 	],
@@ -307,6 +322,9 @@ export const MODEL_CAPABILITIES = {
 		"text-generation"
 	],
 	"@cf/moonshotai/kimi-k2.6": [
+		"text-generation"
+	],
+	"@cf/cloudflare/clef": [
 		"text-generation"
 	],
 	"@cf/zai-org/glm-4.7-flash": [
@@ -350,6 +368,9 @@ export const MODEL_CAPABILITIES = {
 	],
 	"@cf/baai/bge-small-en-v1.5": [
 		"embeddings"
+	],
+	"@cf/swiss-ai/apertus-v1.5-8b": [
+		"text-generation"
 	],
 	"@cf/qwen/qwen2.5-coder-32b-instruct": [
 		"text-generation"
@@ -415,6 +436,9 @@ export const MODEL_CAPABILITIES = {
 		"image-generation"
 	],
 	"@cf/meta/llama-4-scout-17b-16e-instruct": [
+		"text-generation"
+	],
+	"@cf/cloudflare/clef-flash": [
 		"text-generation"
 	],
 	"@cf/qwen/qwq-32b": [
