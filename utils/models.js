@@ -1,7 +1,7 @@
 // Unified models configuration for Cloudflare Workers AI
 // This file contains all supported models organized by category with context windows
 //
-// Auto-generated on: 2026-10-05T18:15:49.151Z
+// Auto-generated on: 2026-10-12T18:52:05.036Z
 // To update: npm run update-models
 
 // === CONTEXT WINDOW MAPPING ===
@@ -49,6 +49,7 @@ export const MODEL_CONTEXT_WINDOWS = {
 	"@cf/black-forest-labs/flux-2-klein-4b": 4096,
 	"@cf/baai/bge-small-en-v1.5": 512,
 	"@cf/swiss-ai/apertus-v1.5-8b": 4096,
+	"@cf/cloudflare/clef-omni": 4096,
 	"@cf/qwen/qwen2.5-coder-32b-instruct": 32768,
 	"@cf/zai-org/glm-5.2": 4096,
 	"@cf/nvidia/nemotron-3-120b-a12b": 4096,
@@ -100,6 +101,7 @@ export const MODEL_CATEGORIES = {
 		"@cf/ibm-granite/granite-4.0-h-micro",
 		"@cf/deepseek-ai/deepseek-v4-flash-0731",
 		"@cf/swiss-ai/apertus-v1.5-8b",
+		"@cf/cloudflare/clef-omni",
 		"@cf/qwen/qwen2.5-coder-32b-instruct",
 		"@cf/zai-org/glm-5.2",
 		"@cf/nvidia/nemotron-3-120b-a12b",
@@ -137,6 +139,7 @@ export const MODEL_CATEGORIES = {
 		"@cf/ibm-granite/granite-4.0-h-micro",
 		"@cf/deepseek-ai/deepseek-v4-flash-0731",
 		"@cf/swiss-ai/apertus-v1.5-8b",
+		"@cf/cloudflare/clef-omni",
 		"@cf/qwen/qwen2.5-coder-32b-instruct",
 		"@cf/zai-org/glm-5.2",
 		"@cf/nvidia/nemotron-3-120b-a12b",
@@ -370,6 +373,9 @@ export const MODEL_CAPABILITIES = {
 		"embeddings"
 	],
 	"@cf/swiss-ai/apertus-v1.5-8b": [
+		"text-generation"
+	],
+	"@cf/cloudflare/clef-omni": [
 		"text-generation"
 	],
 	"@cf/qwen/qwen2.5-coder-32b-instruct": [
