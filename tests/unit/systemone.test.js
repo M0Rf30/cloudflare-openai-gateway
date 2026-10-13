@@ -43,6 +43,33 @@ describe('System One handler', () => {
 		expect(response.status).toBe(400);
 		expect((await response.json()).error.param).toBe('questions');
 	});
+
+	it.each([
+		[{ q: { type: 'boolean', instructions: 'x' } }, 'questions.q.type'],
+		[{ q: { type: 'noul' } }, 'questions.q.instructions'],
+		[{ q: { type: 'choice', instructions: 'x', criteria: { only: null } } }, 'questions.q.criteria'],
+		[{ q: { type: 'score', instructions: 'x', criteria: ['low'] } }, 'questions.q.criteria'],
+		[{ 'bad id': { type: 'noul', instructions: 'x' } }, 'questions'],
+	])('rejects malformed question %j with 400 on %s', async (badQuestions, param) => {
+		const env = { AI: { run: vi.fn() } };
+		const response = await systemOneHandler(createMockRequest({ state: 'x', questions: badQuestions }), env);
+
+		expect(response.status).toBe(400);
+		expect((await response.json()).error.param).toBe(param);
+		expect(env.AI.run).not.toHaveBeenCalled();
+	});
+
+	it.each([
+		["5006: Error: required properties at '/' are 'model,state,questions'", 400],
+		['3036: You have used up your daily free allocation of 10,000 neurons.', 429],
+		['AiError: 3040: Capacity temporarily exceeded, please try again.', 429],
+		['unexpected failure', 500],
+	])('maps Workers AI error "%s" to %i', async (message, status) => {
+		const env = { AI: { run: vi.fn().mockRejectedValue(new Error(message)) } };
+		const response = await systemOneHandler(createMockRequest({ state: 'x', questions }), env);
+
+		expect(response.status).toBe(status);
+	});
 });
 
 describe('Chat handler with decision models', () => {

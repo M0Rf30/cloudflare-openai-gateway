@@ -219,6 +219,50 @@ export function validateAudioFile(file, fieldName = 'file', maxSize = 25 * 1024 
 	return file;
 }
 
+// Workers AI internal error codes -> OpenAI-style errors.
+// https://developers.cloudflare.com/workers-ai/platform/errors/
+const WORKERS_AI_ERROR_STATUS = {
+	3003: 400, // Incomplete request
+	3006: 413, // Request too large
+	3007: 408, // Timeout
+	3008: 408, // Aborted
+	3023: 403, // Account blocked
+	3036: 429, // Daily free neuron allocation used up
+	3040: 429, // Out of capacity
+	3041: 403, // Account not allowed for private model
+	3042: 404, // Invalid model ID
+	5004: 400, // Invalid data
+	5005: 405, // LoRa unsupported
+	5006: 400, // Input schema validation failed
+	5007: 400, // No such model
+	5016: 403, // Model agreement required
+	5018: 403, // Account not allowed for private model
+	5035: 403, // Model requires Workers Paid plan
+};
+
+export function mapUpstreamError(error) {
+	if (error instanceof APIError) return error;
+	const match = /\b([35]\d{3}):/.exec(error?.message ?? '');
+	const status = match ? WORKERS_AI_ERROR_STATUS[match[1]] : undefined;
+	if (!status) return error;
+	const message = error.message;
+	if (status === 400) return new ValidationError(message);
+	if (status === 403) return new PermissionError(message);
+	if (status === 404) return new NotFoundError(message);
+	if (status === 429) return new RateLimitError(message);
+	return new APIError(message, 'invalid_request_error', status, match[1]);
+}
+
+const REDACTED_HEADERS = new Set(['authorization', 'cookie', 'cf-access-jwt-assertion']);
+
+function redactHeaders(headers) {
+	const out = {};
+	for (const [key, value] of headers.entries()) {
+		out[key] = REDACTED_HEADERS.has(key.toLowerCase()) ? '[REDACTED]' : value;
+	}
+	return out;
+}
+
 // Enhanced error logging
 export function logError(error, context = {}) {
 	const logData = {
@@ -258,12 +302,13 @@ export function asyncErrorHandler(handler) {
 				});
 				return createErrorResponse(parseError);
 			}
-			logError(error, {
+			const mapped = mapUpstreamError(error);
+			logError(mapped, {
 				url: request.url,
 				method: request.method,
-				headers: Object.fromEntries(request.headers.entries()),
+				headers: redactHeaders(request.headers),
 			});
-			return createErrorResponse(error);
+			return createErrorResponse(mapped);
 		}
 	};
 }
