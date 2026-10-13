@@ -8,6 +8,7 @@ import { transcriptionHandler, translationHandler, speechHandler } from './route
 import { getImageHandler, imageGenerationHandler } from './routes/image';
 import { modelsHandler } from './routes/models';
 import { storeDocumentHandler, ragSearchHandler, ragChatHandler } from './routes/rag';
+import { systemOneHandler } from './routes/systemone';
 
 // import utilities
 import { DistributedRateLimiter } from './utils/DistributedRateLimiter';
@@ -62,6 +63,8 @@ router
 	.post('/images/generations', imageGenerationHandler)
 	.get('/images/get/:name', getImageHandler)
 	.get('/models', modelsHandler)
+	// System One API (decision models: Clef)
+	.post('/systemone', systemOneHandler)
 	// RAG endpoints
 	.post('/rag/documents', storeDocumentHandler)
 	.post('/rag/search', ragSearchHandler)

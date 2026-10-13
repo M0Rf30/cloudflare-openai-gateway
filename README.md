@@ -112,6 +112,14 @@ POST /v1/rag/chat
 
 Store documents for RAG, search documents, and perform RAG-enhanced chat completions.
 
+### Decisions (System One API)
+
+```
+POST /v1/systemone
+```
+
+Typed decisions with Cloudflare's Clef models (`clef`, `clef-flash`, `clef-omni`). Clef returns probabilities for `noul`/`choice`/`score` questions instead of text, so it is not available through `/v1/chat/completions`.
+
 ## 🛠 Setup and Deployment
 
 ### Prerequisites

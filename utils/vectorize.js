@@ -18,7 +18,7 @@ export async function storeVectors(vectorIndex, vectors) {
 		};
 	} catch (error) {
 		console.error('Failed to store vectors:', error);
-		throw new Error(`Vectorize storage failed: ${error.message}`);
+		throw new Error(`Vectorize storage failed: ${error.message}`, { cause: error });
 	}
 }
 
@@ -55,7 +55,7 @@ export async function searchVectors(vectorIndex, queryVector, options = {}) {
 		}));
 	} catch (error) {
 		console.error('Failed to search vectors:', error);
-		throw new Error(`Vectorize search failed: ${error.message}`);
+		throw new Error(`Vectorize search failed: ${error.message}`, { cause: error });
 	}
 }
 

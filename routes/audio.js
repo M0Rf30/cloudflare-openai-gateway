@@ -118,7 +118,7 @@ export const transcriptionHandler = asyncErrorHandler(async (request, env) => {
 	const response = await env.AI.run(modelPath, input);
 
 	// Handle different response formats based on model
-	let transcriptionText = '';
+	let transcriptionText;
 	let words = [];
 	let segments = [];
 
@@ -490,31 +490,9 @@ export const speechHandler = asyncErrorHandler(async (request, env) => {
 		audioData = response;
 	}
 
-	// Determine content type based on response_format
-	let contentType = 'audio/mpeg'; // MeloTTS returns MP3 format
-	let filename = 'speech.mp3';
-
-	// Note: MeloTTS only supports MP3 output format
-	// Other formats would require conversion
-	switch (response_format) {
-	case 'mp3':
-		contentType = 'audio/mpeg';
-		filename = 'speech.mp3';
-		break;
-	case 'opus':
-	case 'aac':
-	case 'flac':
-	case 'wav':
-	case 'pcm':
-		// MeloTTS only supports MP3, so we return MP3 regardless
-		// In a production system, you might want to add audio conversion here
-		contentType = 'audio/mpeg';
-		filename = 'speech.mp3';
-		break;
-	default:
-		contentType = 'audio/mpeg';
-		filename = 'speech.mp3';
-	}
+	// MeloTTS only produces MP3; every response_format is served as MP3 until conversion exists.
+	const contentType = 'audio/mpeg';
+	const filename = 'speech.mp3';
 
 	// Store large audio files in R2 if bucket is available
 	if (env.AUDIO_BUCKET && audioKey && audioData.byteLength > 1024 * 1024) {

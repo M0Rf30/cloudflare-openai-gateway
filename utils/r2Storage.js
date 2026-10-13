@@ -34,7 +34,7 @@ export async function storeFile(bucket, key, data, metadata = {}) {
 		};
 	} catch (error) {
 		console.error('Failed to store file in R2:', error);
-		throw new Error(`R2 storage failed: ${error.message}`);
+		throw new Error(`R2 storage failed: ${error.message}`, { cause: error });
 	}
 }
 
@@ -54,7 +54,7 @@ export async function getFile(bucket, key) {
 		return object;
 	} catch (error) {
 		console.error('Failed to retrieve file from R2:', error);
-		throw new Error(`R2 retrieval failed: ${error.message}`);
+		throw new Error(`R2 retrieval failed: ${error.message}`, { cause: error });
 	}
 }
 

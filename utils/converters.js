@@ -42,6 +42,6 @@ export async function convertImageToDataURL(imageUrl) {
 		return dataUrl;
 	} catch (error) {
 		console.error('Error in convertImageToDataURL:', error);
-		throw new Error('Image URL must be a data URI or a valid HTTP/HTTPS URL.');
+		throw new Error('Image URL must be a data URI or a valid HTTP/HTTPS URL.', { cause: error });
 	}
 }

@@ -63,6 +63,9 @@ const CONTEXT_WINDOW_OVERRIDES = {
 	'@cf/baai/bge-small-en-v1.5': 512,
 	'@cf/baai/bge-large-en-v1.5': 512,
 	'@cf/baai/bge-m3': 8192,
+	'@cf/cloudflare/clef': 65536,
+	'@cf/cloudflare/clef-flash': 65536,
+	'@cf/cloudflare/clef-omni': 64000,
 };
 
 // OpenAI-compatible model mappings
@@ -124,6 +127,14 @@ const TASK_TO_CATEGORY_MAP = {
 	'Object Detection': ['classification'],
 	'Voice Activity Detection': ['audio_stt'],
 };
+
+// Decision models (System One API: `state` + typed `questions` in, probabilities out).
+// Cloudflare files them under "Text Generation", but they cannot serve chat/completions.
+const DECISION_MODEL_PREFIX = '@cf/cloudflare/clef';
+
+function isDecisionModel(model) {
+	return model.name.startsWith(DECISION_MODEL_PREFIX);
+}
 
 /**
  * Fetch models from Cloudflare Workers AI using wrangler CLI
@@ -214,6 +225,7 @@ function getContextWindow(model) {
  * Get capabilities for a model based on its task
  */
 function getCapabilities(model) {
+	if (isDecisionModel(model)) return ['decision'];
 	const task = model.task?.name || 'Unknown';
 	return TASK_TO_CAPABILITY_MAP[task] || [];
 }
@@ -222,6 +234,7 @@ function getCapabilities(model) {
  * Get categories for a model based on its task
  */
 function getCategories(model) {
+	if (isDecisionModel(model)) return ['decision'];
 	const task = model.task?.name || 'Unknown';
 	return TASK_TO_CATEGORY_MAP[task] || [];
 }
@@ -248,6 +261,7 @@ function processModels(models) {
 		classification: [],
 		reranking: [],
 		rag: [],
+		decision: [],
 	};
 
 	for (const model of models) {
@@ -307,6 +321,8 @@ function generateModelsFile(processedData) {
 //
 // Auto-generated on: ${timestamp}
 // To update: npm run update-models
+
+import { ValidationError } from './errors.js';
 
 // === CONTEXT WINDOW MAPPING ===
 export const MODEL_CONTEXT_WINDOWS = ${JSON.stringify(modelContextWindows, null, '\t')};
@@ -476,7 +492,7 @@ export const isOSSModel = (model) => {
  * @param {string|undefined} requestedModel - The model name from the request
  * @param {Object} [envMapper={}] - Optional env.MODEL_MAPPER for backward-compatible overrides
  * @returns {string} The resolved Cloudflare model path
- * @throws {Error} If the model is not supported
+ * @throws {ValidationError} If the model is not supported by the category
  */
 export const resolveModel = (category, requestedModel, envMapper = {}) => {
 	const supportedModels = MODEL_CATEGORIES[category];
@@ -507,7 +523,16 @@ export const resolveModel = (category, requestedModel, envMapper = {}) => {
 		}
 	}
 
-	throw new Error(\`Unsupported model: \${requestedModel}. Supported models: \${supportedModels.join(', ')}\`);
+	if (MODEL_CATEGORIES.decision?.includes(requestedModel)) {
+		throw new ValidationError(
+			\`\${requestedModel} is a decision model and does not generate text. Use POST /v1/systemone instead.\`,
+			'model',
+		);
+	}
+	throw new ValidationError(
+		\`Unsupported model: \${requestedModel}. Supported models: \${supportedModels.join(', ')}\`,
+		'model',
+	);
 };
 `;
 }

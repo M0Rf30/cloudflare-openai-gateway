@@ -4,6 +4,8 @@
 // Auto-generated on: 2026-10-12T18:52:05.036Z
 // To update: npm run update-models
 
+import { ValidationError } from './errors.js';
+
 // === CONTEXT WINDOW MAPPING ===
 export const MODEL_CONTEXT_WINDOWS = {
 	"@cf/pipecat-ai/smart-turn-v2": 4096,
@@ -33,7 +35,7 @@ export const MODEL_CONTEXT_WINDOWS = {
 	"@cf/zai-org/glm-5.3-flash": 4096,
 	"@cf/meta/llama-3.2-1b-instruct": 60000,
 	"@cf/moonshotai/kimi-k2.6": 4096,
-	"@cf/cloudflare/clef": 4096,
+	"@cf/cloudflare/clef": 65536,
 	"@cf/zai-org/glm-4.7-flash": 4096,
 	"@cf/microsoft/resnet-50": 4096,
 	"@cf/bytedance/stable-diffusion-xl-lightning": 77,
@@ -49,7 +51,7 @@ export const MODEL_CONTEXT_WINDOWS = {
 	"@cf/black-forest-labs/flux-2-klein-4b": 4096,
 	"@cf/baai/bge-small-en-v1.5": 512,
 	"@cf/swiss-ai/apertus-v1.5-8b": 4096,
-	"@cf/cloudflare/clef-omni": 4096,
+	"@cf/cloudflare/clef-omni": 64000,
 	"@cf/qwen/qwen2.5-coder-32b-instruct": 32768,
 	"@cf/zai-org/glm-5.2": 4096,
 	"@cf/nvidia/nemotron-3-120b-a12b": 4096,
@@ -72,7 +74,7 @@ export const MODEL_CONTEXT_WINDOWS = {
 	"@cf/moondream/moondream3.1-9B-A2B": 4096,
 	"@cf/leonardo/lucid-origin": 4096,
 	"@cf/meta/llama-4-scout-17b-16e-instruct": 131072,
-	"@cf/cloudflare/clef-flash": 4096,
+	"@cf/cloudflare/clef-flash": 65536,
 	"@cf/qwen/qwq-32b": 32768,
 	"@cf/baai/bge-large-en-v1.5": 512,
 	"@cf/deepgram/aura-2-en": 4096
@@ -94,14 +96,12 @@ export const MODEL_CATEGORIES = {
 		"@cf/zai-org/glm-5.3-flash",
 		"@cf/meta/llama-3.2-1b-instruct",
 		"@cf/moonshotai/kimi-k2.6",
-		"@cf/cloudflare/clef",
 		"@cf/zai-org/glm-4.7-flash",
 		"@cf/meta-llama/llama-2-7b-chat-hf-lora",
 		"@cf/meta/llama-3.3-70b-instruct-fp8-fast",
 		"@cf/ibm-granite/granite-4.0-h-micro",
 		"@cf/deepseek-ai/deepseek-v4-flash-0731",
 		"@cf/swiss-ai/apertus-v1.5-8b",
-		"@cf/cloudflare/clef-omni",
 		"@cf/qwen/qwen2.5-coder-32b-instruct",
 		"@cf/zai-org/glm-5.2",
 		"@cf/nvidia/nemotron-3-120b-a12b",
@@ -115,7 +115,6 @@ export const MODEL_CATEGORIES = {
 		"@cf/qwen/qwen3.8-27b",
 		"@cf/openai/gpt-oss-20b",
 		"@cf/meta/llama-4-scout-17b-16e-instruct",
-		"@cf/cloudflare/clef-flash",
 		"@cf/qwen/qwq-32b"
 	],
 	"completion": [
@@ -132,14 +131,12 @@ export const MODEL_CATEGORIES = {
 		"@cf/zai-org/glm-5.3-flash",
 		"@cf/meta/llama-3.2-1b-instruct",
 		"@cf/moonshotai/kimi-k2.6",
-		"@cf/cloudflare/clef",
 		"@cf/zai-org/glm-4.7-flash",
 		"@cf/meta-llama/llama-2-7b-chat-hf-lora",
 		"@cf/meta/llama-3.3-70b-instruct-fp8-fast",
 		"@cf/ibm-granite/granite-4.0-h-micro",
 		"@cf/deepseek-ai/deepseek-v4-flash-0731",
 		"@cf/swiss-ai/apertus-v1.5-8b",
-		"@cf/cloudflare/clef-omni",
 		"@cf/qwen/qwen2.5-coder-32b-instruct",
 		"@cf/zai-org/glm-5.2",
 		"@cf/nvidia/nemotron-3-120b-a12b",
@@ -153,7 +150,6 @@ export const MODEL_CATEGORIES = {
 		"@cf/qwen/qwen3.8-27b",
 		"@cf/openai/gpt-oss-20b",
 		"@cf/meta/llama-4-scout-17b-16e-instruct",
-		"@cf/cloudflare/clef-flash",
 		"@cf/qwen/qwq-32b"
 	],
 	"embeddings": [
@@ -211,6 +207,11 @@ export const MODEL_CATEGORIES = {
 		"@cf/baai/bge-base-en-v1.5",
 		"@cf/google/embeddinggemma-300m",
 		"@cf/baai/bge-large-en-v1.5"
+	],
+	"decision": [
+		"@cf/cloudflare/clef",
+		"@cf/cloudflare/clef-omni",
+		"@cf/cloudflare/clef-flash"
 	]
 };
 
@@ -328,7 +329,7 @@ export const MODEL_CAPABILITIES = {
 		"text-generation"
 	],
 	"@cf/cloudflare/clef": [
-		"text-generation"
+		"decision"
 	],
 	"@cf/zai-org/glm-4.7-flash": [
 		"text-generation"
@@ -376,7 +377,7 @@ export const MODEL_CAPABILITIES = {
 		"text-generation"
 	],
 	"@cf/cloudflare/clef-omni": [
-		"text-generation"
+		"decision"
 	],
 	"@cf/qwen/qwen2.5-coder-32b-instruct": [
 		"text-generation"
@@ -445,7 +446,7 @@ export const MODEL_CAPABILITIES = {
 		"text-generation"
 	],
 	"@cf/cloudflare/clef-flash": [
-		"text-generation"
+		"decision"
 	],
 	"@cf/qwen/qwq-32b": [
 		"text-generation"
@@ -469,7 +470,8 @@ export const DEFAULT_MODELS = {
 	"image_generation": "@cf/black-forest-labs/flux-2-klein-9b",
 	"vision": "@cf/llava-hf/llava-1.5-7b-hf",
 	"classification": "@cf/huggingface/distilbert-sst-2-int8",
-	"rag": "@cf/baai/bge-m3"
+	"rag": "@cf/baai/bge-m3",
+	"decision": "@cf/cloudflare/clef"
 };
 
 // === INTEGRATED HELPER FUNCTIONS ===
@@ -616,7 +618,7 @@ export const isOSSModel = (model) => {
  * @param {string|undefined} requestedModel - The model name from the request
  * @param {Object} [envMapper={}] - Optional env.MODEL_MAPPER for backward-compatible overrides
  * @returns {string} The resolved Cloudflare model path
- * @throws {Error} If the model is not supported
+ * @throws {ValidationError} If the model is not supported by the category
  */
 export const resolveModel = (category, requestedModel, envMapper = {}) => {
 	const supportedModels = MODEL_CATEGORIES[category];
@@ -647,5 +649,14 @@ export const resolveModel = (category, requestedModel, envMapper = {}) => {
 		}
 	}
 
-	throw new Error(`Unsupported model: ${requestedModel}. Supported models: ${supportedModels.join(', ')}`);
+	if (MODEL_CATEGORIES.decision?.includes(requestedModel)) {
+		throw new ValidationError(
+			`${requestedModel} is a decision model and does not generate text. Use POST /v1/systemone instead.`,
+			'model',
+		);
+	}
+	throw new ValidationError(
+		`Unsupported model: ${requestedModel}. Supported models: ${supportedModels.join(', ')}`,
+		'model',
+	);
 };

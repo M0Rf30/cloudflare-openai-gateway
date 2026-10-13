@@ -139,6 +139,44 @@ POST /v1/chat/completions
 
 ---
 
+## Decisions (System One API)
+
+Evaluate a `state` against typed questions with Cloudflare's Clef decision models. The body and response follow the [Workers AI Clef schema](https://developers.cloudflare.com/workers-ai/models/clef/) and are passed through unchanged. Clef models are rejected by `/v1/chat/completions` and `/v1/completions` with a 400.
+
+### Endpoint
+
+```
+POST /v1/systemone
+```
+
+### Request Body
+
+| Field       | Type          | Required | Description                                                                                  |
+| ----------- | ------------- | -------- | -------------------------------------------------------------------------------------------- |
+| `model`     | string        | No       | `clef` (default), `clef-flash`, `clef-omni`, or the full `@cf/cloudflare/...` path            |
+| `state`     | string/object | Yes      | Content to evaluate (text, records, chat logs, application state)                            |
+| `questions` | object        | Yes      | 1–64 questions keyed by id; each `{ type: "noul" \| "choice" \| "score", instructions, criteria? }` |
+| `images`    | array         | No       | Up to 4 embedded images; `clef-omni` also accepts `audio` and `videos`                        |
+
+### Example Request
+
+```json
+{
+	"model": "clef-flash",
+	"state": "Checkout has been failing for every customer for the last hour.",
+	"questions": {
+		"urgent": { "type": "noul", "instructions": "Is this support request urgent?" },
+		"team": {
+			"type": "choice",
+			"instructions": "Which team should handle this request?",
+			"criteria": { "billing": "Payments", "technical": "Outages and errors", "sales": "Plans" }
+		}
+	}
+}
+```
+
+---
+
 ## Completions (Legacy)
 
 Create a completion for the given prompt.

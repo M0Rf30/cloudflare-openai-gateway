@@ -5,7 +5,6 @@ import { resolveModel } from '../utils/models.js';
 import { asyncErrorHandler, ValidationError, NotFoundError } from '../utils/errors.js';
 
 export const imageGenerationHandler = asyncErrorHandler(async (request, env) => {
-	let model = '@cf/black-forest-labs/flux-1-schnell'; // Default model
 	let format = 'url';
 	const created = Math.floor(Date.now() / 1000);
 
@@ -26,13 +25,8 @@ export const imageGenerationHandler = asyncErrorHandler(async (request, env) => 
 		}
 	}
 
-	// Handle model selection - support both OpenAI and Cloudflare model names
-	if (json?.model) {
-		model = resolveModel('image_generation', json.model);
-	} else {
-		// Use default model if none provided
-		model = resolveModel('image_generation');
-	}
+	// Supports both OpenAI and Cloudflare model names; falls back to the category default.
+	const model = resolveModel('image_generation', json.model);
 
 	const inputs = {
 		prompt: json.prompt,

@@ -103,7 +103,7 @@ export const chatHandler = asyncErrorHandler(async (request, env) => {
 	const context_window = MODEL_CONTEXT_WINDOWS[model];
 
 	// Handle max_tokens parameter with reasonable defaults and limits
-	let max_tokens = 1024; // Fallback default
+	let max_tokens;
 	if (typeof json.max_tokens === 'number' && json.max_tokens > 0) {
 		max_tokens = Math.min(json.max_tokens, context_window);
 	} else {
@@ -144,7 +144,7 @@ export const chatHandler = asyncErrorHandler(async (request, env) => {
 	}
 
 	// Prepare AI parameters
-	let processedMessages = messages;
+	let processedMessages;
 	const aiParams = {
 		stream: json.stream,
 		max_tokens,
