@@ -1,6 +1,5 @@
 .DS_Store
 /node_modules
-*-lock.*
 *.lock
 *.log
 *.mp3
@@ -9,5 +8,4 @@
 .opencode/
 .dev.vars
 dist/
-openspec/
 

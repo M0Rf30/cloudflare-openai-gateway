@@ -1,14 +1,17 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Deploy to Cloudflare Workers
 # Usage: ./scripts/deploy.sh
+set -euo pipefail
 
-# Load account ID from .dev.vars if it exists
+# Load .dev.vars (KEY=VALUE lines) without word-splitting or eval of values
 if [ -f .dev.vars ]; then
-    export $(grep -v '^#' .dev.vars | xargs)
+    set -a
+    # shellcheck disable=SC1091
+    . ./.dev.vars
+    set +a
 fi
 
-# Deploy with account ID from environment
-if [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+if [ -z "${CLOUDFLARE_ACCOUNT_ID:-}" ]; then
     echo "Error: CLOUDFLARE_ACCOUNT_ID not set"
     echo "Either:"
     echo "  1. Add CLOUDFLARE_ACCOUNT_ID to .dev.vars"
@@ -18,4 +21,4 @@ fi
 
 echo "Deploying to Cloudflare Workers..."
 echo "Account ID: $CLOUDFLARE_ACCOUNT_ID"
-wrangler deploy
+npx wrangler deploy

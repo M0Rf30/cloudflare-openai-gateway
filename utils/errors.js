@@ -92,132 +92,6 @@ export function createErrorResponse(error, status = null) {
 	});
 }
 
-// Legacy compatibility functions
-export function createSuccessResponse(data, status = 200) {
-	return new Response(JSON.stringify(data), {
-		status,
-		headers: {
-			'Content-Type': 'application/json',
-			'Access-Control-Allow-Origin': '*',
-		},
-	});
-}
-
-// Validation helpers
-export function validateRequired(value, fieldName) {
-	if (value === undefined || value === null || value === '') {
-		throw new ValidationError(`Missing required parameter: ${fieldName}`, fieldName);
-	}
-	return value;
-}
-
-export function validateString(value, fieldName, minLength = 0, maxLength = Infinity) {
-	if (typeof value !== 'string') {
-		throw new ValidationError(`Parameter ${fieldName} must be a string`, fieldName);
-	}
-	if (value.length < minLength) {
-		throw new ValidationError(
-			`Parameter ${fieldName} must be at least ${minLength} characters`,
-			fieldName,
-		);
-	}
-	if (value.length > maxLength) {
-		throw new ValidationError(
-			`Parameter ${fieldName} must be at most ${maxLength} characters`,
-			fieldName,
-		);
-	}
-	return value;
-}
-
-export function validateNumber(value, fieldName, min = -Infinity, max = Infinity) {
-	const num = typeof value === 'string' ? parseFloat(value) : value;
-	if (typeof num !== 'number' || isNaN(num)) {
-		throw new ValidationError(`Parameter ${fieldName} must be a number`, fieldName);
-	}
-	if (num < min) {
-		throw new ValidationError(`Parameter ${fieldName} must be at least ${min}`, fieldName);
-	}
-	if (num > max) {
-		throw new ValidationError(`Parameter ${fieldName} must be at most ${max}`, fieldName);
-	}
-	return num;
-}
-
-export function validateArray(value, fieldName, minLength = 0, maxLength = Infinity) {
-	if (!Array.isArray(value)) {
-		throw new ValidationError(`Parameter ${fieldName} must be an array`, fieldName);
-	}
-	if (value.length < minLength) {
-		throw new ValidationError(
-			`Parameter ${fieldName} must have at least ${minLength} items`,
-			fieldName,
-		);
-	}
-	if (value.length > maxLength) {
-		throw new ValidationError(
-			`Parameter ${fieldName} must have at most ${maxLength} items`,
-			fieldName,
-		);
-	}
-	return value;
-}
-
-export function validateEnum(value, fieldName, allowedValues) {
-	if (!allowedValues.includes(value)) {
-		throw new ValidationError(
-			`Parameter ${fieldName} must be one of: ${allowedValues.join(', ')}`,
-			fieldName,
-		);
-	}
-	return value;
-}
-
-export function validateFile(file, fieldName = 'file') {
-	if (!file) {
-		throw new ValidationError(`Missing required file parameter: ${fieldName}`, fieldName);
-	}
-	if (!(file instanceof File)) {
-		throw new ValidationError(`Parameter ${fieldName} must be a file`, fieldName);
-	}
-	if (file.size === 0) {
-		throw new ValidationError(`File ${fieldName} cannot be empty`, fieldName);
-	}
-	return file;
-}
-
-export function validateAudioFile(file, fieldName = 'file', maxSize = 25 * 1024 * 1024) {
-	validateFile(file, fieldName);
-
-	if (file.size > maxSize) {
-		throw new ValidationError(
-			`File ${fieldName} must be smaller than ${Math.round(maxSize / 1024 / 1024)}MB`,
-			fieldName,
-		);
-	}
-
-	// Check file type if available
-	if (file.type && !file.type.startsWith('audio/')) {
-		const supportedTypes = [
-			'audio/mpeg',
-			'audio/mp4',
-			'audio/wav',
-			'audio/webm',
-			'audio/ogg',
-			'audio/flac',
-			'audio/x-wav',
-		];
-
-		if (!supportedTypes.includes(file.type)) {
-			throw new ValidationError(
-				`File ${fieldName} must be an audio file. Supported formats: ${supportedTypes.join(', ')}`,
-				fieldName,
-			);
-		}
-	}
-
-	return file;
-}
 
 // Workers AI internal error codes -> OpenAI-style errors.
 // https://developers.cloudflare.com/workers-ai/platform/errors/
@@ -242,36 +116,41 @@ const WORKERS_AI_ERROR_STATUS = {
 
 export function mapUpstreamError(error) {
 	if (error instanceof APIError) return error;
-	const match = /\b([35]\d{3}):/.exec(error?.message ?? '');
-	const status = match ? WORKERS_AI_ERROR_STATUS[match[1]] : undefined;
+	const message = String(error?.message ?? '');
+	const match = /\b([35]\d{3})\b/.exec(`${error?.code ?? ''} ${message}`);
+	let status = match ? WORKERS_AI_ERROR_STATUS[match[1]] : undefined;
+	if (!status && /bad input/i.test(message)) status = 400;
 	if (!status) return error;
-	const message = error.message;
+	const code = match ? match[1] : null;
 	if (status === 400) return new ValidationError(message);
 	if (status === 403) return new PermissionError(message);
 	if (status === 404) return new NotFoundError(message);
 	if (status === 429) return new RateLimitError(message);
-	return new APIError(message, 'invalid_request_error', status, match[1]);
+	return new APIError(message, 'invalid_request_error', status, code);
 }
 
-const REDACTED_HEADERS = new Set(['authorization', 'cookie', 'cf-access-jwt-assertion']);
+// Only these request headers may ever reach the logs (never authorization/cookies).
+const LOGGED_HEADERS = ['content-type', 'cf-ray', 'user-agent'];
 
-function redactHeaders(headers) {
+function pickHeaders(headers) {
 	const out = {};
-	for (const [key, value] of headers.entries()) {
-		out[key] = REDACTED_HEADERS.has(key.toLowerCase()) ? '[REDACTED]' : value;
+	if (!headers?.get) return out;
+	for (const name of LOGGED_HEADERS) {
+		const value = headers.get(name);
+		if (value) out[name] = value;
 	}
 	return out;
 }
 
-// Enhanced error logging
+function requestContext(request) {
+	return { url: request?.url, method: request?.method, headers: pickHeaders(request?.headers) };
+}
+
 export function logError(error, context = {}) {
+	const status = error instanceof APIError ? error.status : 500;
 	const logData = {
 		timestamp: new Date().toISOString(),
-		error: {
-			name: error.name,
-			message: error.message,
-			stack: error.stack,
-		},
+		error: { name: error.name, message: error.message },
 		context,
 	};
 
@@ -282,7 +161,12 @@ export function logError(error, context = {}) {
 		logData.error.param = error.param;
 	}
 
-	console.error('API Error:', JSON.stringify(logData, null, 2));
+	if (status >= 500) {
+		logData.error.stack = error.stack;
+		console.error('API Error:', JSON.stringify(logData));
+	} else {
+		console.warn('API Client Error:', JSON.stringify(logData));
+	}
 }
 
 // Async error wrapper
@@ -291,24 +175,19 @@ export function asyncErrorHandler(handler) {
 		try {
 			return await handler(request, env, ctx);
 		} catch (error) {
-			// Convert JSON parse errors to 400 validation errors
-			if (error instanceof SyntaxError && error.message.includes('JSON')) {
-				const parseError = new ValidationError(
-					'Invalid JSON in request body: ' + error.message,
-				);
-				logError(parseError, {
-					url: request.url,
-					method: request.method,
-				});
-				return createErrorResponse(parseError);
-			}
-			const mapped = mapUpstreamError(error);
-			logError(mapped, {
-				url: request.url,
-				method: request.method,
-				headers: redactHeaders(request.headers),
-			});
-			return createErrorResponse(mapped);
+			return handleError(error, request);
 		}
 	};
+}
+
+// Convert any thrown value into an OpenAI-style error response (also used by the router catch).
+export function handleError(error, request) {
+	let mapped;
+	if (error instanceof SyntaxError && error.message.includes('JSON')) {
+		mapped = new ValidationError('Invalid JSON in request body: ' + error.message);
+	} else {
+		mapped = mapUpstreamError(error);
+	}
+	logError(mapped, requestContext(request));
+	return createErrorResponse(mapped);
 }

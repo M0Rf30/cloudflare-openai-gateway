@@ -1,5 +1,4 @@
 import { MODEL_CATEGORIES, DEFAULT_MODELS } from '../utils/models.js';
-import { getCORSHeaders } from '../utils/format.js';
 import { asyncErrorHandler, ValidationError } from '../utils/errors.js';
 
 const DECISION_MODEL_PATH_PREFIX = '@cf/cloudflare/';
@@ -105,5 +104,5 @@ export const systemOneHandler = asyncErrorHandler(async (request, env) => {
 	const selector = modelPath.slice(DECISION_MODEL_PATH_PREFIX.length);
 	const result = await env.AI.run(modelPath, { ...json, model: selector });
 
-	return Response.json(result, { headers: getCORSHeaders() });
+	return Response.json(result);
 });

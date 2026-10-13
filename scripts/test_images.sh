@@ -1,16 +1,13 @@
-#!/bin/bash
-
-# Simple test script for image generation endpoints
-# Tests the /v1/images/generations endpoint
+#!/usr/bin/env bash
+# Smoke test for /v1/images/generations.
+set -euo pipefail
 
 WORKER_URL="${WORKER_URL:-http://localhost:8787/v1}"
 AUTH_TOKEN="${AUTH_TOKEN:-change_this_token}"
 
 echo "Testing image generation endpoint at $WORKER_URL"
 
-# Test basic image generation
-echo "Testing image generation..."
-curl -X POST "$WORKER_URL/images/generations" \
+curl -fsS -X POST "$WORKER_URL/images/generations" \
   -H "Authorization: Bearer $AUTH_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -20,4 +17,4 @@ curl -X POST "$WORKER_URL/images/generations" \
     "size": "1024x1024"
   }'
 
-echo -e "\nAll image generation tests completed!"
+printf '\nAll image generation tests completed!\n'

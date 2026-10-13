@@ -1,7 +1,7 @@
 // Unified models configuration for Cloudflare Workers AI
 // This file contains all supported models organized by category with context windows
 //
-// Auto-generated on: 2026-10-12T18:52:05.036Z
+// Auto-generated on: 2026-10-13T17:39:17.606Z
 // To update: npm run update-models
 
 import { ValidationError } from './errors.js';
@@ -9,73 +9,73 @@ import { ValidationError } from './errors.js';
 // === CONTEXT WINDOW MAPPING ===
 export const MODEL_CONTEXT_WINDOWS = {
 	"@cf/pipecat-ai/smart-turn-v2": 4096,
-	"@cf/openai/gpt-oss-120b": 4096,
+	"@cf/openai/gpt-oss-120b": 128000,
 	"@cf/baai/bge-m3": 8192,
 	"@cf/huggingface/distilbert-sst-2-int8": 4096,
 	"@cf/google/gemma-2b-it-lora": 8192,
 	"@cf/black-forest-labs/flux-2-klein-9b": 4096,
-	"@cf/meta/llama-3.2-3b-instruct": 128000,
-	"@cf/meta/llama-guard-3-8b": 4096,
-	"@cf/qwen/qwen3-embedding-0.6b": 4096,
+	"@cf/meta/llama-3.2-3b-instruct": 80000,
+	"@cf/meta/llama-guard-3-8b": 131072,
+	"@cf/qwen/qwen3-embedding-0.6b": 8192,
 	"@cf/myshell-ai/melotts": 4096,
-	"@cf/mistral/mistral-7b-instruct-v0.2-lora": 32768,
+	"@cf/mistral/mistral-7b-instruct-v0.2-lora": 15000,
 	"@cf/deepgram/aura-2-es": 4096,
-	"@cf/moonshotai/kimi-k2.7-code": 4096,
+	"@cf/moonshotai/kimi-k2.7-code": 262144,
 	"@cf/openai/whisper": 30,
-	"@cf/zai-org/glm-5.3": 4096,
-	"@cf/utter-project/eurollm-9b-it": 4096,
+	"@cf/zai-org/glm-5.3": 1048576,
+	"@cf/utter-project/eurollm-9b-it": 32000,
 	"@cf/pfnet/plamo-embedding-1b": 4096,
 	"@cf/llava-hf/llava-1.5-7b-hf": 4096,
-	"@cf/deepseek-ai/deepseek-r1-distill-qwen-32b": 4096,
+	"@cf/deepseek-ai/deepseek-r1-distill-qwen-32b": 80000,
 	"@cf/runwayml/stable-diffusion-v1-5-inpainting": 4096,
 	"@cf/deepgram/flux": 4096,
 	"@cf/deepgram/nova-3": 4096,
 	"@cf/black-forest-labs/flux-1-schnell": 77,
-	"@cf/meta/llama-3.1-8b-instruct-fp8": 128000,
-	"@cf/zai-org/glm-5.3-flash": 4096,
+	"@cf/meta/llama-3.1-8b-instruct-fp8": 32000,
+	"@cf/zai-org/glm-5.3-flash": 1048576,
 	"@cf/meta/llama-3.2-1b-instruct": 60000,
-	"@cf/moonshotai/kimi-k2.6": 4096,
+	"@cf/moonshotai/kimi-k2.6": 262144,
 	"@cf/cloudflare/clef": 65536,
-	"@cf/zai-org/glm-4.7-flash": 4096,
+	"@cf/zai-org/glm-4.7-flash": 131072,
 	"@cf/microsoft/resnet-50": 4096,
 	"@cf/bytedance/stable-diffusion-xl-lightning": 77,
-	"@cf/meta-llama/llama-2-7b-chat-hf-lora": 4096,
+	"@cf/meta-llama/llama-2-7b-chat-hf-lora": 8192,
 	"@cf/meta/llama-3.3-70b-instruct-fp8-fast": 24000,
-	"@cf/ibm-granite/granite-4.0-h-micro": 4096,
+	"@cf/ibm-granite/granite-4.0-h-micro": 131000,
 	"@cf/lykon/dreamshaper-8-lcm": 4096,
-	"@cf/deepseek-ai/deepseek-v4-flash-0731": 4096,
+	"@cf/deepseek-ai/deepseek-v4-flash-0731": 1048576,
 	"@cf/leonardo/phoenix-1.0": 4096,
 	"@cf/stabilityai/stable-diffusion-xl-base-1.0": 4096,
 	"@cf/meta/m2m100-1.2b": 4096,
 	"@cf/ai4bharat/indictrans2-en-indic-1B": 4096,
 	"@cf/black-forest-labs/flux-2-klein-4b": 4096,
 	"@cf/baai/bge-small-en-v1.5": 512,
-	"@cf/swiss-ai/apertus-v1.5-8b": 4096,
-	"@cf/cloudflare/clef-omni": 64000,
+	"@cf/swiss-ai/apertus-v1.5-8b": 262144,
+	"@cf/cloudflare/clef-omni": 65536,
 	"@cf/qwen/qwen2.5-coder-32b-instruct": 32768,
-	"@cf/zai-org/glm-5.2": 4096,
-	"@cf/nvidia/nemotron-3-120b-a12b": 4096,
+	"@cf/zai-org/glm-5.2": 262144,
+	"@cf/nvidia/nemotron-3-120b-a12b": 256000,
 	"@cf/baai/bge-base-en-v1.5": 512,
-	"@cf/aisingapore/gemma-sea-lion-v4-27b-it": 4096,
-	"@cf/qwen/qwen3-30b-a3b-fp8": 4096,
+	"@cf/aisingapore/gemma-sea-lion-v4-27b-it": 128000,
+	"@cf/qwen/qwen3-30b-a3b-fp8": 32768,
 	"@cf/black-forest-labs/flux-2-dev": 4096,
-	"@cf/google/gemma-7b-it-lora": 8192,
-	"@cf/google/gemma-4-26b-a4b-it": 4096,
+	"@cf/google/gemma-7b-it-lora": 3500,
+	"@cf/google/gemma-4-26b-a4b-it": 256000,
 	"@cf/mistralai/mistral-small-3.1-24b-instruct": 128000,
-	"@cf/deepseek-ai/deepseek-v4-pro-0813": 4096,
+	"@cf/deepseek-ai/deepseek-v4-pro-0813": 1048576,
 	"@cf/meta/llama-3.2-11b-vision-instruct": 128000,
-	"@cf/qwen/qwen3.8-27b": 4096,
+	"@cf/qwen/qwen3.8-27b": 262144,
 	"@cf/openai/whisper-tiny-en": 30,
 	"@cf/openai/whisper-large-v3-turbo": 30,
 	"@cf/deepgram/aura-1": 4096,
-	"@cf/openai/gpt-oss-20b": 4096,
+	"@cf/openai/gpt-oss-20b": 128000,
 	"@cf/google/embeddinggemma-300m": 4096,
 	"@cf/baai/bge-reranker-base": 4096,
 	"@cf/moondream/moondream3.1-9B-A2B": 4096,
 	"@cf/leonardo/lucid-origin": 4096,
-	"@cf/meta/llama-4-scout-17b-16e-instruct": 131072,
-	"@cf/cloudflare/clef-flash": 65536,
-	"@cf/qwen/qwq-32b": 32768,
+	"@cf/meta/llama-4-scout-17b-16e-instruct": 131000,
+	"@cf/cloudflare/clef-flash": 24576,
+	"@cf/qwen/qwq-32b": 24000,
 	"@cf/baai/bge-large-en-v1.5": 512,
 	"@cf/deepgram/aura-2-en": 4096
 };
@@ -86,7 +86,6 @@ export const MODEL_CATEGORIES = {
 		"@cf/openai/gpt-oss-120b",
 		"@cf/google/gemma-2b-it-lora",
 		"@cf/meta/llama-3.2-3b-instruct",
-		"@cf/meta/llama-guard-3-8b",
 		"@cf/mistral/mistral-7b-instruct-v0.2-lora",
 		"@cf/moonshotai/kimi-k2.7-code",
 		"@cf/zai-org/glm-5.3",
@@ -121,7 +120,6 @@ export const MODEL_CATEGORIES = {
 		"@cf/openai/gpt-oss-120b",
 		"@cf/google/gemma-2b-it-lora",
 		"@cf/meta/llama-3.2-3b-instruct",
-		"@cf/meta/llama-guard-3-8b",
 		"@cf/mistral/mistral-7b-instruct-v0.2-lora",
 		"@cf/moonshotai/kimi-k2.7-code",
 		"@cf/zai-org/glm-5.3",
@@ -163,7 +161,6 @@ export const MODEL_CATEGORIES = {
 	],
 	"audio_stt": [
 		"@cf/openai/whisper",
-		"@cf/deepgram/flux",
 		"@cf/deepgram/nova-3",
 		"@cf/openai/whisper-tiny-en",
 		"@cf/openai/whisper-large-v3-turbo"
@@ -180,7 +177,6 @@ export const MODEL_CATEGORIES = {
 	],
 	"image_generation": [
 		"@cf/black-forest-labs/flux-2-klein-9b",
-		"@cf/runwayml/stable-diffusion-v1-5-inpainting",
 		"@cf/black-forest-labs/flux-1-schnell",
 		"@cf/bytedance/stable-diffusion-xl-lightning",
 		"@cf/lykon/dreamshaper-8-lcm",
@@ -215,7 +211,7 @@ export const MODEL_CATEGORIES = {
 	]
 };
 
-// OpenAI-compatible model name mappings - using most powerful available models
+// OpenAI-compatible model name mappings. An alias only resolves inside a category that contains its target.
 export const MODEL_MAPPING = {
 	"gpt-3.5-turbo": "@cf/meta/llama-3.1-8b-instruct-fp8",
 	"gpt-4": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
@@ -243,15 +239,11 @@ export const MODEL_MAPPING = {
 	"rerank-001": "@cf/baai/bge-reranker-base"
 };
 
-// Reverse mapping for API responses
-export const REVERSE_MODEL_MAPPING = Object.fromEntries(
-	Object.entries(MODEL_MAPPING).map(([openai, cf]) => [cf, openai])
-);
-
 // Model capabilities
 export const MODEL_CAPABILITIES = {
 	"@cf/openai/gpt-oss-120b": [
-		"text-generation"
+		"text-generation",
+		"function-calling"
 	],
 	"@cf/baai/bge-m3": [
 		"embeddings"
@@ -284,16 +276,20 @@ export const MODEL_CAPABILITIES = {
 		"text-to-speech"
 	],
 	"@cf/moonshotai/kimi-k2.7-code": [
-		"text-generation"
+		"text-generation",
+		"function-calling",
+		"vision"
 	],
 	"@cf/openai/whisper": [
 		"speech-to-text"
 	],
 	"@cf/zai-org/glm-5.3": [
-		"text-generation"
+		"text-generation",
+		"function-calling"
 	],
 	"@cf/utter-project/eurollm-9b-it": [
-		"text-generation"
+		"text-generation",
+		"function-calling"
 	],
 	"@cf/pfnet/plamo-embedding-1b": [
 		"embeddings"
@@ -320,19 +316,24 @@ export const MODEL_CAPABILITIES = {
 		"text-generation"
 	],
 	"@cf/zai-org/glm-5.3-flash": [
-		"text-generation"
+		"text-generation",
+		"function-calling",
+		"vision"
 	],
 	"@cf/meta/llama-3.2-1b-instruct": [
 		"text-generation"
 	],
 	"@cf/moonshotai/kimi-k2.6": [
-		"text-generation"
+		"text-generation",
+		"function-calling",
+		"vision"
 	],
 	"@cf/cloudflare/clef": [
 		"decision"
 	],
 	"@cf/zai-org/glm-4.7-flash": [
-		"text-generation"
+		"text-generation",
+		"function-calling"
 	],
 	"@cf/microsoft/resnet-50": [
 		"image-classification"
@@ -344,16 +345,19 @@ export const MODEL_CAPABILITIES = {
 		"text-generation"
 	],
 	"@cf/meta/llama-3.3-70b-instruct-fp8-fast": [
-		"text-generation"
+		"text-generation",
+		"function-calling"
 	],
 	"@cf/ibm-granite/granite-4.0-h-micro": [
-		"text-generation"
+		"text-generation",
+		"function-calling"
 	],
 	"@cf/lykon/dreamshaper-8-lcm": [
 		"image-generation"
 	],
 	"@cf/deepseek-ai/deepseek-v4-flash-0731": [
-		"text-generation"
+		"text-generation",
+		"function-calling"
 	],
 	"@cf/leonardo/phoenix-1.0": [
 		"image-generation"
@@ -374,7 +378,9 @@ export const MODEL_CAPABILITIES = {
 		"embeddings"
 	],
 	"@cf/swiss-ai/apertus-v1.5-8b": [
-		"text-generation"
+		"text-generation",
+		"function-calling",
+		"vision"
 	],
 	"@cf/cloudflare/clef-omni": [
 		"decision"
@@ -383,10 +389,12 @@ export const MODEL_CAPABILITIES = {
 		"text-generation"
 	],
 	"@cf/zai-org/glm-5.2": [
-		"text-generation"
+		"text-generation",
+		"function-calling"
 	],
 	"@cf/nvidia/nemotron-3-120b-a12b": [
-		"text-generation"
+		"text-generation",
+		"function-calling"
 	],
 	"@cf/baai/bge-base-en-v1.5": [
 		"embeddings"
@@ -395,7 +403,8 @@ export const MODEL_CAPABILITIES = {
 		"text-generation"
 	],
 	"@cf/qwen/qwen3-30b-a3b-fp8": [
-		"text-generation"
+		"text-generation",
+		"function-calling"
 	],
 	"@cf/black-forest-labs/flux-2-dev": [
 		"image-generation"
@@ -404,19 +413,27 @@ export const MODEL_CAPABILITIES = {
 		"text-generation"
 	],
 	"@cf/google/gemma-4-26b-a4b-it": [
-		"text-generation"
+		"text-generation",
+		"function-calling",
+		"vision"
 	],
 	"@cf/mistralai/mistral-small-3.1-24b-instruct": [
-		"text-generation"
+		"text-generation",
+		"function-calling",
+		"vision"
 	],
 	"@cf/deepseek-ai/deepseek-v4-pro-0813": [
-		"text-generation"
+		"text-generation",
+		"function-calling"
 	],
 	"@cf/meta/llama-3.2-11b-vision-instruct": [
-		"text-generation"
+		"text-generation",
+		"vision"
 	],
 	"@cf/qwen/qwen3.8-27b": [
-		"text-generation"
+		"text-generation",
+		"function-calling",
+		"vision"
 	],
 	"@cf/openai/whisper-tiny-en": [
 		"speech-to-text"
@@ -428,7 +445,8 @@ export const MODEL_CAPABILITIES = {
 		"text-to-speech"
 	],
 	"@cf/openai/gpt-oss-20b": [
-		"text-generation"
+		"text-generation",
+		"function-calling"
 	],
 	"@cf/google/embeddinggemma-300m": [
 		"embeddings"
@@ -443,7 +461,9 @@ export const MODEL_CAPABILITIES = {
 		"image-generation"
 	],
 	"@cf/meta/llama-4-scout-17b-16e-instruct": [
-		"text-generation"
+		"text-generation",
+		"function-calling",
+		"vision"
 	],
 	"@cf/cloudflare/clef-flash": [
 		"decision"
@@ -459,161 +479,25 @@ export const MODEL_CAPABILITIES = {
 	]
 };
 
-// Default models for each category - prioritizing most modern and powerful models
+// Default model for each category (preferred model when present in the catalog, else the first entry)
 export const DEFAULT_MODELS = {
 	"chat": "@cf/openai/gpt-oss-120b",
 	"completion": "@cf/openai/gpt-oss-120b",
-	"embeddings": "@cf/baai/bge-m3",
-	"audio_stt": "@cf/openai/whisper",
+	"embeddings": "@cf/baai/bge-base-en-v1.5",
+	"audio_stt": "@cf/openai/whisper-large-v3-turbo",
 	"audio_tts": "@cf/myshell-ai/melotts",
 	"audio_translation": "@cf/meta/m2m100-1.2b",
-	"image_generation": "@cf/black-forest-labs/flux-2-klein-9b",
+	"image_generation": "@cf/black-forest-labs/flux-1-schnell",
 	"vision": "@cf/llava-hf/llava-1.5-7b-hf",
 	"classification": "@cf/huggingface/distilbert-sst-2-int8",
-	"rag": "@cf/baai/bge-m3",
+	"rag": "@cf/baai/bge-base-en-v1.5",
 	"decision": "@cf/cloudflare/clef"
-};
-
-// === INTEGRATED HELPER FUNCTIONS ===
-
-// Helper function to get all models
-export const getAllModels = () => {
-	const allModels = new Set();
-	Object.values(MODEL_CATEGORIES).forEach(category => {
-		category.forEach(model => allModels.add(model));
-	});
-	return Array.from(allModels).sort();
-};
-
-// Helper function to get models by capability
-export const getModelsByCapability = capability => {
-	return Object.entries(MODEL_CAPABILITIES)
-		.filter(([_model, capabilities]) => capabilities.includes(capability))
-		.map(([_model]) => _model);
-};
-
-// Helper function to check if model exists
-export const isValidModel = modelName => {
-	return Object.keys(MODEL_CAPABILITIES).includes(modelName);
-};
-
-// **UPDATED: Context window function using the mapping**
-export const getModelContextWindow = modelName => {
-	const contextWindow = MODEL_CONTEXT_WINDOWS[modelName];
-	if (!contextWindow) {
-		console.warn(`Context window not found for model: ${modelName}. Using default 4096.`);
-		return 4096; // Default fallback
-	}
-	return contextWindow;
-};
-
-// Helper function to validate if a model has context window info
-export const isModelSupported = modelName => {
-	return modelName in MODEL_CONTEXT_WINDOWS;
-};
-
-// Helper function to calculate a sensible max_tokens default for a model
-export const calculateDefaultMaxTokens = (modelName, reservePercentage = 10) => {
-	const contextWindow = getModelContextWindow(modelName);
-	// Reserve a percentage of the context window for the prompt and safety buffer
-	const reserveTokens = Math.floor(contextWindow * (reservePercentage / 100));
-	// Return a reasonable default max_tokens value (at least 100 tokens, no more than 90% of context)
-	const maxTokens = Math.max(100, contextWindow - reserveTokens);
-	return maxTokens > 0 ? maxTokens : 1024; // Ensure we always return a positive number
-};
-
-// Helper function to get all models with context windows above a threshold
-export const getModelsWithContextAbove = threshold => {
-	return Object.entries(MODEL_CONTEXT_WINDOWS)
-		.filter(([_model, contextWindow]) => contextWindow >= threshold)
-		.map(([_model]) => _model);
-};
-
-// Helper function to get models grouped by context window size
-export const getModelsByContextWindow = () => {
-	const grouped = {};
-	Object.entries(MODEL_CONTEXT_WINDOWS).forEach(([model, contextWindow]) => {
-		if (!grouped[contextWindow]) {
-			grouped[contextWindow] = [];
-		}
-		grouped[contextWindow].push(model);
-	});
-	return grouped;
-};
-
-// Context window statistics
-export const getContextWindowStats = () => {
-	const windows = Object.values(MODEL_CONTEXT_WINDOWS);
-	return {
-		total_models: windows.length,
-		min_context: Math.min(...windows),
-		max_context: Math.max(...windows),
-		average_context: Math.round(windows.reduce((a, b) => a + b, 0) / windows.length),
-		models_with_128k_plus: windows.filter(w => w >= 128000).length,
-		models_with_32k_plus: windows.filter(w => w >= 32768).length,
-		models_with_8k_plus: windows.filter(w => w >= 8192).length,
-		models_with_large_context: getModelsWithContextAbove(128000),
-		models_with_medium_context: getModelsWithContextAbove(32768).filter(m => MODEL_CONTEXT_WINDOWS[m] < 128000),
-	};
-};
-
-// Helper to get optimal model for context size requirement
-export const getOptimalModelForContext = (requiredContext, category = 'chat', capabilities = []) => {
-	const categoryModels = MODEL_CATEGORIES[category] || [];
-
-	const suitableModels = categoryModels.filter(model => {
-		const contextWindow = MODEL_CONTEXT_WINDOWS[model];
-		const modelCapabilities = MODEL_CAPABILITIES[model] || [];
-
-		// Check context window requirement
-		if (contextWindow < requiredContext) return false;
-
-		// Check capability requirements
-		if (capabilities.length > 0) {
-			return capabilities.some(cap => modelCapabilities.includes(cap));
-		}
-
-		return true;
-	});
-
-	// Sort by context window (smallest that meets requirements first for efficiency)
-	return suitableModels.sort((a, b) => MODEL_CONTEXT_WINDOWS[a] - MODEL_CONTEXT_WINDOWS[b]);
-};
-
-// Model recommendation based on use case
-export const getModelRecommendation = useCase => {
-	const recommendations = {
-		'long-context': getModelsWithContextAbove(128000),
-		'coding': getModelsByCapability('code-generation'),
-		'vision': getModelsByCapability('vision'),
-		'reasoning': getModelsByCapability('reasoning'),
-		'multilingual': ['@cf/baai/bge-m3', '@cf/meta/llama-3.2-11b-vision-instruct'],
-		'fast-inference': [
-			'@cf/meta/llama-3.2-1b-instruct',
-			'@cf/tinyllama/tinyllama-1.1b-chat-v1.0',
-			'@cf/qwen/qwen1.5-0.5b-chat',
-		],
-		'balanced': ['@cf/meta/llama-3.1-8b-instruct-fp8', '@cf/meta/llama-3-8b-instruct', '@cf/google/gemma-7b-it'],
-	};
-
-	return recommendations[useCase] || [];
-};
-
-// === SHARED HELPERS FOR ROUTE HANDLERS ===
-
-/**
- * Check if a model is an OpenAI OSS model requiring special parameter handling.
- * OSS models use 'input' instead of 'messages'/'prompt' and return a different response format.
- * @param {string} model - The Cloudflare model path
- * @returns {boolean}
- */
-export const isOSSModel = (model) => {
-	return model === '@cf/openai/gpt-oss-120b' || model === '@cf/openai/gpt-oss-20b';
 };
 
 /**
  * Resolve a requested model name to a Cloudflare model path.
- * Handles OpenAI model name mapping, direct Cloudflare model names, and env-based overrides.
+ * Handles OpenAI alias mapping, direct Cloudflare model names, and env-based overrides.
+ * The result always belongs to the given category.
  * @param {string} category - The model category key from MODEL_CATEGORIES (e.g. 'chat', 'completion')
  * @param {string|undefined} requestedModel - The model name from the request
  * @param {Object} [envMapper={}] - Optional env.MODEL_MAPPER for backward-compatible overrides
@@ -631,9 +515,16 @@ export const resolveModel = (category, requestedModel, envMapper = {}) => {
 		return DEFAULT_MODELS[category];
 	}
 
-	// OpenAI model name mapping
-	if (MODEL_MAPPING[requestedModel]) {
-		return MODEL_MAPPING[requestedModel];
+	// OpenAI alias: only valid when its target belongs to this category
+	if (Object.hasOwn(MODEL_MAPPING, requestedModel)) {
+		const target = MODEL_MAPPING[requestedModel];
+		if (supportedModels.includes(target)) {
+			return target;
+		}
+		throw new ValidationError(
+			`Model ${requestedModel} (${target}) is not supported by the ${category} category`,
+			'model',
+		);
 	}
 
 	// Direct Cloudflare model name
@@ -642,7 +533,7 @@ export const resolveModel = (category, requestedModel, envMapper = {}) => {
 	}
 
 	// Env-based mapper fallback (used by completion handler for backward compat)
-	if (envMapper && envMapper[requestedModel]) {
+	if (envMapper && Object.hasOwn(envMapper, requestedModel)) {
 		const mapped = envMapper[requestedModel];
 		if (supportedModels.includes(mapped)) {
 			return mapped;

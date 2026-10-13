@@ -1,4 +1,4 @@
-import { Router } from 'itty-router';
+import { Router, cors } from 'itty-router';
 
 // import the routes
 import { chatHandler } from './routes/chat';
@@ -7,52 +7,67 @@ import { embeddingsHandler } from './routes/embeddings';
 import { transcriptionHandler, translationHandler, speechHandler } from './routes/audio';
 import { getImageHandler, imageGenerationHandler } from './routes/image';
 import { modelsHandler } from './routes/models';
-import { storeDocumentHandler, ragSearchHandler, ragChatHandler } from './routes/rag';
+import * as rag from './routes/rag';
 import { systemOneHandler } from './routes/systemone';
 
 // import utilities
-import { DistributedRateLimiter } from './utils/DistributedRateLimiter';
-import { getCORSHeaders } from './utils/format.js';
-import { AuthenticationError, PermissionError, createErrorResponse } from './utils/errors.js';
+import { AuthenticationError, createErrorResponse, handleError } from './utils/errors.js';
 
-// Create a new router
-const router = Router({ base: '/v1' });
+const { preflight, corsify } = cors({
+	origin: '*',
+	allowMethods: ['GET', 'POST', 'DELETE', 'OPTIONS'],
+	maxAge: 86400,
+});
+const corsHeaders = { 'Access-Control-Allow-Origin': '*' };
+
+// Create a new router: CORS preflight first, CORS headers on every response (incl. errors/streams)
+const router = Router({
+	base: '/v1',
+	before: [preflight],
+	catch: handleError,
+	finally: [corsify],
+});
+
+const encoder = new TextEncoder();
 
 function extractToken(authorizationHeader) {
-	if (authorizationHeader) {
-		const parts = authorizationHeader.split(' ');
-		if (parts.length === 2 && parts[0] === 'Bearer') {
-			return parts[1];
-		}
-	}
-	return null;
+	const match = /^Bearer\s+(\S+)$/i.exec(authorizationHeader ?? '');
+	return match ? match[1] : null;
 }
 
-// CORS preflight handler - must run before auth
-const handleCORS = (request) => {
-	if (request.method === 'OPTIONS') {
-		return new Response(null, {
-			status: 204,
-			headers: getCORSHeaders(),
-		});
+// Constant-time comparison of two secrets via fixed-length SHA-256 digests.
+async function safeEqual(a, b) {
+	const [da, db] = await Promise.all([
+		crypto.subtle.digest('SHA-256', encoder.encode(a)),
+		crypto.subtle.digest('SHA-256', encoder.encode(b)),
+	]);
+	if (typeof crypto.subtle.timingSafeEqual === 'function') {
+		return crypto.subtle.timingSafeEqual(da, db);
 	}
-};
+	const x = new Uint8Array(da);
+	const y = new Uint8Array(db);
+	let diff = 0;
+	for (let i = 0; i < x.length; i++) diff |= x[i] ^ y[i];
+	return diff === 0;
+}
 
-// MIDDLEWARE: withAuthenticatedUser - embeds user in Request or returns a 401
-const bearerAuthentication = (request, env) => {
-	const authorizationHeader = request.headers.get('Authorization');
-	if (!authorizationHeader) {
-		return createErrorResponse(new AuthenticationError('Unauthorized'));
+// Signed image URLs are verified by the image handler itself, so they bypass the bearer check.
+const isPublicRoute = request =>
+	request.method === 'GET' && /^\/v1\/images\/get\/[^/]+$/.test(new URL(request.url).pathname);
+
+// MIDDLEWARE: bearer token authentication
+const bearerAuthentication = async (request, env) => {
+	if (isPublicRoute(request)) return;
+	const token = extractToken(request.headers.get('Authorization'));
+	if (!token) {
+		return createErrorResponse(new AuthenticationError('Missing or malformed Authorization header'));
 	}
-	const access_token = extractToken(authorizationHeader);
-	if (env.ACCESS_TOKEN !== access_token) {
-		return createErrorResponse(new PermissionError('Forbidden'));
+	if (!env.ACCESS_TOKEN || !(await safeEqual(token, env.ACCESS_TOKEN))) {
+		return createErrorResponse(new AuthenticationError('Invalid API key'));
 	}
 };
 
 router
-	// .all('*', rateLimit) // Rate limiting disabled
-	.all('*', handleCORS)
 	.all('*', bearerAuthentication)
 	.post('/chat/completions', chatHandler)
 	.post('/completions', completionHandler)
@@ -66,9 +81,10 @@ router
 	// System One API (decision models: Clef)
 	.post('/systemone', systemOneHandler)
 	// RAG endpoints
-	.post('/rag/documents', storeDocumentHandler)
-	.post('/rag/search', ragSearchHandler)
-	.post('/rag/chat', ragChatHandler);
+	.post('/rag/documents', rag.storeDocumentHandler)
+	.delete('/rag/documents/:docId', rag.deleteDocumentHandler)
+	.post('/rag/search', rag.ragSearchHandler)
+	.post('/rag/chat', rag.ragChatHandler);
 
 // 404 for everything else under /v1
 router.all('*', () =>
@@ -79,12 +95,9 @@ router.all('*', () =>
 				type: 'not_found_error',
 			},
 		},
-		{ status: 404, headers: getCORSHeaders() },
+		{ status: 404 },
 	),
 );
-
-// Export the Durable Object
-export { DistributedRateLimiter };
 
 // Root handler wraps the router to serve requests outside /v1
 export default {
@@ -111,10 +124,11 @@ export default {
 						rag_documents: '/v1/rag/documents',
 						rag_search: '/v1/rag/search',
 						rag_chat: '/v1/rag/chat',
+						systemone: '/v1/systemone',
 					},
-					documentation: 'https://github.com/M0Rf30/openai-cf-workers-ai',
+					documentation: 'https://github.com/M0Rf30/cloudflare-openai-gateway',
 				},
-				{ headers: getCORSHeaders() },
+				{ headers: corsHeaders },
 			);
 		}
 
@@ -131,7 +145,7 @@ export default {
 					type: 'not_found_error',
 				},
 			},
-			{ status: 404, headers: getCORSHeaders() },
+			{ status: 404, headers: corsHeaders },
 		);
 	},
 };

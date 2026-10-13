@@ -2,13 +2,15 @@ import { generateCacheKey, cacheResponse, getCachedResponse, shouldCache } from 
 import { convertImageToDataURL } from '../utils/converters.js';
 import {
 	processFunctionMessages,
+	normalizeToolMessages,
 	addFunctionContext,
 	parseFunctionCall,
-	formatFunctionCallResponse,
+	formatToolCallsMessage,
 } from '../utils/functionCalling.js';
-import { MODEL_CONTEXT_WINDOWS, MODEL_CAPABILITIES, resolveModel, isOSSModel } from '../utils/models.js';
-import { processThink, extractOSSResponse, estimateTokens, getCORSHeaders } from '../utils/format.js';
-import { createChatStreamTransformer } from '../utils/stream.js';
+import { MODEL_CAPABILITIES, resolveModel } from '../utils/models.js';
+import { processThink, estimateTokens, contentToText, normalizeAIResponse } from '../utils/format.js';
+import { createChatStreamTransformer, chatResultToStream } from '../utils/stream.js';
+import { applyStop, newResponseId, resolveGenerationParams } from '../utils/generation.js';
 import { asyncErrorHandler, ValidationError } from '../utils/errors.js';
 
 // Helper function to process messages with potential image content
@@ -78,10 +80,36 @@ async function processMultimodalMessages(messages) {
 	);
 }
 
+const IMPLICIT_THINK_MODELS = /deepseek-r1|qwq/i;
+
+/** Resolve tool_choice: returns the tools to expose (null = none). */
+function selectTools(tools, toolChoice) {
+	if (!tools) return null;
+	if (toolChoice === 'none') return null;
+	const forced = toolChoice?.type === 'function' ? toolChoice.function?.name : toolChoice?.name;
+	if (forced) {
+		const match = tools.filter(tool => tool.function.name === forced);
+		if (match.length === 0) {
+			throw new ValidationError(`tool_choice references unknown function: ${forced}`, 'tool_choice');
+		}
+		return match;
+	}
+	return tools;
+}
+
+function estimatePromptTokens(messages, tools) {
+	let tokens = 0;
+	for (const message of messages) {
+		tokens += estimateTokens(contentToText(message.content));
+	}
+	if (tools) tokens += estimateTokens(JSON.stringify(tools));
+	return tokens;
+}
+
 export const chatHandler = asyncErrorHandler(async (request, env) => {
 	// get the current time in epoch seconds
 	const created = Math.floor(Date.now() / 1000);
-	const uuid = crypto.randomUUID();
+	const id = newResponseId('chatcmpl');
 
 	if (!request.headers.get('Content-Type')?.includes('application/json')) {
 		throw new ValidationError('Invalid request. Content-Type must be application/json');
@@ -96,33 +124,15 @@ export const chatHandler = asyncErrorHandler(async (request, env) => {
 		throw new ValidationError('messages are required and must be a non-empty array', 'messages');
 	}
 
-	const messages = json.messages;
-	if (!json?.stream) json.stream = false;
-
-	// Get model configuration and context window
-	const context_window = MODEL_CONTEXT_WINDOWS[model];
-
-	// Handle max_tokens parameter with reasonable defaults and limits
-	let max_tokens;
-	if (typeof json.max_tokens === 'number' && json.max_tokens > 0) {
-		max_tokens = Math.min(json.max_tokens, context_window);
-	} else {
-		max_tokens = Math.min(Math.floor(context_window * 0.7), 16384);
-	}
-	max_tokens = Math.max(10, max_tokens);
-
-	// Handle other generation parameters
-	const temperature =
-		json?.temperature && typeof json.temperature === 'number' ? Math.max(0, Math.min(json.temperature, 2)) : 0.7;
-
-	const topP = json?.top_p && typeof json.top_p === 'number' ? Math.max(0, Math.min(json.top_p, 1)) : 0.9;
+	const stream = json.stream === true;
+	const { maxTokens, params, stop, includeUsage } = resolveGenerationParams(json, model);
 
 	// Handle function calling
 	let tools = null;
 	let toolChoice = null;
 	if (json?.tools && Array.isArray(json.tools)) {
 		tools = json.tools;
-		toolChoice = json?.tool_choice || 'auto';
+		toolChoice = json?.tool_choice ?? 'auto';
 
 		for (const tool of tools) {
 			if (tool.type !== 'function') {
@@ -140,168 +150,143 @@ export const chatHandler = asyncErrorHandler(async (request, env) => {
 			type: 'function',
 			function: func,
 		}));
-		toolChoice = json?.function_call || 'auto';
+		toolChoice = json?.function_call ?? 'auto';
 	}
 
-	// Prepare AI parameters
-	let processedMessages;
-	const aiParams = {
-		stream: json.stream,
-		max_tokens,
-		temperature,
-		topP,
-	};
+	tools = selectTools(tools, toolChoice);
+	if (tools && tools.length === 0) tools = null;
 
-	// Store original messages before any processing that might be skipped
-	const originalMessages = [...messages];
+	// Process messages for multimodal content (single pass: remote images are fetched once)
+	let processedMessages = await processMultimodalMessages(json.messages);
 
-	// Process messages for multimodal content
-	processedMessages = await processMultimodalMessages(originalMessages);
-
-	// Determine if the model supports function calling
-	const modelSupportsFunctionCalling = MODEL_CAPABILITIES[model]?.includes('function-calling');
-
-	// Handle function calling logic
-	if (tools) {
-		if (modelSupportsFunctionCalling) {
-			processedMessages = processFunctionMessages(processedMessages, tools);
-			processedMessages = addFunctionContext(processedMessages, tools);
-		} else {
-			tools = null;
-			toolChoice = null;
-			processedMessages = await processMultimodalMessages(originalMessages, model);
-		}
-	}
-
-	// Special handling for OpenAI OSS models that require 'input' instead of 'messages'
-	if (isOSSModel(model)) {
-		let inputText = '';
-		for (const message of processedMessages) {
-			if (message.role === 'system') {
-				inputText += `[SYSTEM] ${message.content}\n`;
-			} else if (message.role === 'user') {
-				inputText += `[USER] ${message.content}\n`;
-			} else if (message.role === 'assistant') {
-				inputText += `[ASSISTANT] ${message.content}\n`;
-			}
-		}
-		aiParams.input = inputText.trim();
-		delete aiParams.tools;
-		delete aiParams.tool_choice;
+	// Native function calling when the model supports it, prompt injection otherwise.
+	// Tool / tool_calls history messages are always converted to something the model accepts.
+	const nativeTools = MODEL_CAPABILITIES[model]?.includes('function-calling') === true;
+	if (nativeTools) {
+		processedMessages = normalizeToolMessages(processedMessages);
 	} else {
-		aiParams.messages = processedMessages;
-		if (tools) {
-			aiParams.tools = tools;
-			aiParams.tool_choice = toolChoice;
-		}
+		processedMessages = processFunctionMessages(processedMessages);
+		if (tools) processedMessages = addFunctionContext(processedMessages, tools);
 	}
+
+	// Prompt-injected function calls can only be recognised in the full text, so those
+	// requests run non-streaming upstream and are replayed as SSE.
+	const streamUpstream = stream && !(tools && !nativeTools);
+
+	const aiParams = {
+		messages: processedMessages,
+		stream: streamUpstream,
+		...params,
+	};
+	if (tools && nativeTools) aiParams.tools = tools;
+
+	const promptTokens = estimatePromptTokens(processedMessages, tools && nativeTools ? tools : null);
 
 	// Check cache for non-streaming requests (don't cache function calls)
 	let cacheKey = null;
 	if (env.CACHE_KV && shouldCache(aiParams) && !tools) {
-		cacheKey = await generateCacheKey(model, processedMessages, aiParams);
+		cacheKey = await generateCacheKey(model, processedMessages, { ...params, stop });
 		const cachedResponse = await getCachedResponse(env.CACHE_KV, cacheKey);
 
 		if (cachedResponse) {
 			return Response.json({
 				...cachedResponse,
-				id: uuid,
+				id,
+				model: json.model || model,
 				created,
 			});
 		}
 	}
 
-	// Ensure max_tokens is a valid integer for the Cloudflare backend
-	const finalParams = { ...aiParams };
-	if (finalParams.max_tokens === undefined || finalParams.max_tokens === null) {
-		finalParams.max_tokens = Math.floor(context_window * 0.7);
-	}
-
 	// Run the AI model
-	const aiResp = await env.AI.run(model, finalParams);
+	const aiResp = await env.AI.run(model, aiParams);
 
 	// Use the model name the client sent (for response compatibility)
 	const responseModel = json.model || model;
 
 	// Handle streaming response
-	if (json.stream) {
-		const transformer = createChatStreamTransformer(uuid, created, responseModel);
+	if (streamUpstream) {
+		const transformer = createChatStreamTransformer(id, created, responseModel, {
+			includeUsage,
+			stop,
+			implicitThink: IMPLICIT_THINK_MODELS.test(model),
+			maxTokens,
+			promptTokens,
+		});
 		return new Response(aiResp.pipeThrough(transformer), {
 			headers: {
 				'Content-Type': 'text/event-stream',
 				'Cache-Control': 'no-cache',
 				'Connection': 'keep-alive',
-				...getCORSHeaders(),
 			},
 		});
 	}
 
-	// Non-streaming: extract content
-	let contentToProcess;
-	if (isOSSModel(model)) {
-		contentToProcess = extractOSSResponse(aiResp);
-	} else if (typeof aiResp === 'object' && aiResp !== null && 'response' in aiResp) {
-		contentToProcess = aiResp.response;
-	} else {
-		contentToProcess = aiResp;
+	// Non-streaming: normalize whatever shape the model returned
+	const normalized = normalizeAIResponse(aiResp);
+	let content = processThink(normalized.text);
+
+	let toolCalls = [];
+	if (tools) {
+		if (nativeTools) {
+			toolCalls = normalized.toolCalls;
+		} else {
+			const parsed = parseFunctionCall(content);
+			if (parsed.hasFunction) {
+				toolCalls = [parsed.functionCall];
+				content = parsed.content;
+			}
+		}
 	}
 
-	const { hasFunction, functionCall, content } = parseFunctionCall(contentToProcess);
+	let stopped = false;
+	if (toolCalls.length === 0) {
+		({ text: content, stopped } = applyStop(content, stop));
+	}
 
-	// Estimate token usage
-	const promptText = processedMessages.map(m => (typeof m.content === 'string' ? m.content : '')).join(' ');
-	const promptTokens = estimateTokens(promptText);
-	const completionTokens = estimateTokens(typeof content === 'string' ? content : '');
-
-	let response;
-	if (hasFunction && tools) {
-		const message = formatFunctionCallResponse(functionCall, content);
-		response = {
-			id: uuid,
-			model: responseModel,
-			created,
-			object: 'chat.completion',
-			choices: [
-				{
-					index: 0,
-					message,
-					finish_reason: 'tool_calls',
-				},
-			],
-			usage: {
+	const usage =
+		normalized.usage ??
+		(() => {
+			const completionTokens = estimateTokens(content);
+			return {
 				prompt_tokens: promptTokens,
 				completion_tokens: completionTokens,
 				total_tokens: promptTokens + completionTokens,
-			},
-		};
-	} else {
-		const finalContent = processThink(content);
-		const finalCompletionTokens = estimateTokens(typeof finalContent === 'string' ? finalContent : '');
-		response = {
-			id: uuid,
-			model: responseModel,
-			created,
-			object: 'chat.completion',
-			choices: [
-				{
-					index: 0,
-					message: {
-						role: 'assistant',
-						content: finalContent,
-					},
-					finish_reason: 'stop',
-				},
-			],
-			usage: {
-				prompt_tokens: promptTokens,
-				completion_tokens: finalCompletionTokens,
-				total_tokens: promptTokens + finalCompletionTokens,
-			},
-		};
+			};
+		})();
+
+	let finishReason = 'stop';
+	if (toolCalls.length > 0) {
+		finishReason = 'tool_calls';
+	} else if (!stopped && (normalized.finishReason === 'length' || (normalized.usage && usage.completion_tokens >= maxTokens))) {
+		finishReason = 'length';
 	}
 
+	const message =
+		toolCalls.length > 0 ? formatToolCallsMessage(toolCalls, content) : { role: 'assistant', content };
+
+	if (stream) {
+		// prompt-injected tool calling requested with stream: true
+		return new Response(chatResultToStream(id, created, responseModel, message, finishReason, usage, includeUsage), {
+			headers: {
+				'Content-Type': 'text/event-stream',
+				'Cache-Control': 'no-cache',
+				'Connection': 'keep-alive',
+			},
+		});
+	}
+
+	const response = {
+		id,
+		model: responseModel,
+		created,
+		object: 'chat.completion',
+		choices: [{ index: 0, message, finish_reason: finishReason }],
+		usage,
+	};
+
 	// Cache the response if caching is enabled (don't cache function calls)
-	if (env.CACHE_KV && cacheKey && shouldCache(aiParams) && !hasFunction) {
+	if (env.CACHE_KV && cacheKey && toolCalls.length === 0) {
 		const cacheTtl =
 			env.CACHE_TTL_SECONDS && parseInt(env.CACHE_TTL_SECONDS) > 0 ? parseInt(env.CACHE_TTL_SECONDS) : 3600;
 		await cacheResponse(env.CACHE_KV, cacheKey, response, cacheTtl);

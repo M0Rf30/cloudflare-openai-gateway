@@ -1,32 +1,17 @@
-#!/bin/bash
+#!/usr/bin/env bash
+# Runs all smoke-test scripts against a running worker; stops at the first failure.
+set -euo pipefail
 
-# Simple test runner for all endpoints
-# Runs all individual test scripts
+cd "$(dirname "$0")/.."
 
-WORKER_URL="${WORKER_URL:-http://localhost:8787/v1}"
-AUTH_TOKEN="${AUTH_TOKEN:-change_this_token}"
-
-export WORKER_URL
-export AUTH_TOKEN
+export WORKER_URL="${WORKER_URL:-http://localhost:8787/v1}"
+export AUTH_TOKEN="${AUTH_TOKEN:-change_this_token}"
 
 echo "Running all tests for $WORKER_URL"
 
-# Make all test scripts executable
-chmod +x scripts/test_*.sh
+for name in models completions embeddings audio images rag; do
+    printf '\n=== Testing %s ===\n' "$name"
+    bash "scripts/test_${name}.sh"
+done
 
-echo "=== Testing Models ==="
-./scripts/test_models.sh
-
-echo -e "\n=== Testing Completions ==="
-./scripts/test_completions.sh
-
-echo -e "\n=== Testing Embeddings ==="
-./scripts/test_embeddings.sh
-
-echo -e "\n=== Testing Audio ==="
-./scripts/test_audio.sh
-
-echo -e "\n=== Testing Images ==="
-./scripts/test_images.sh
-
-echo -e "\n🎉 All tests completed!"
+printf '\nAll tests completed!\n'

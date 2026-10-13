@@ -1,16 +1,14 @@
-#!/bin/bash
-
-# Simple test script for completions endpoints
-# Tests the /v1/chat/completions endpoint
+#!/usr/bin/env bash
+# Smoke test for /v1/chat/completions (plain and streaming).
+set -euo pipefail
 
 WORKER_URL="${WORKER_URL:-http://localhost:8787/v1}"
 AUTH_TOKEN="${AUTH_TOKEN:-change_this_token}"
 
 echo "Testing completions endpoint at $WORKER_URL"
 
-# Test basic chat completion
 echo "Testing chat completion..."
-curl -X POST "$WORKER_URL/chat/completions" \
+curl -fsS -X POST "$WORKER_URL/chat/completions" \
   -H "Authorization: Bearer $AUTH_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -20,8 +18,8 @@ curl -X POST "$WORKER_URL/chat/completions" \
     ]
   }'
 
-echo -e "\nTesting chat completion with streaming..."
-curl -X POST "$WORKER_URL/chat/completions" \
+printf '\nTesting chat completion with streaming...\n'
+curl -fsSN -X POST "$WORKER_URL/chat/completions" \
   -H "Authorization: Bearer $AUTH_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -32,4 +30,4 @@ curl -X POST "$WORKER_URL/chat/completions" \
     "stream": true
   }'
 
-echo -e "\nAll completions tests completed!"
+printf '\nAll completions tests completed!\n'

@@ -1,16 +1,14 @@
-#!/bin/bash
-
-# Simple test script for RAG endpoints
-# Tests the /v1/rag/* endpoints
+#!/usr/bin/env bash
+# Smoke test for the /v1/rag/* endpoints.
+set -euo pipefail
 
 WORKER_URL="${WORKER_URL:-http://localhost:8787/v1}"
 AUTH_TOKEN="${AUTH_TOKEN:-change_this_token}"
 
 echo "Testing RAG endpoints at $WORKER_URL"
 
-# Test storing a document
 echo "Testing document storage..."
-curl -X POST "$WORKER_URL/rag/documents" \
+curl -fsS -X POST "$WORKER_URL/rag/documents" \
   -H "Authorization: Bearer $AUTH_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -22,8 +20,8 @@ curl -X POST "$WORKER_URL/rag/documents" \
     }
   }'
 
-echo -e "\nTesting RAG search..."
-curl -X POST "$WORKER_URL/rag/search" \
+printf '\nTesting RAG search...\n'
+curl -fsS -X POST "$WORKER_URL/rag/search" \
   -H "Authorization: Bearer $AUTH_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -31,8 +29,8 @@ curl -X POST "$WORKER_URL/rag/search" \
     "top_k": 3
   }'
 
-echo -e "\nTesting RAG chat..."
-curl -X POST "$WORKER_URL/rag/chat" \
+printf '\nTesting RAG chat...\n'
+curl -fsS -X POST "$WORKER_URL/rag/chat" \
   -H "Authorization: Bearer $AUTH_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -44,4 +42,4 @@ curl -X POST "$WORKER_URL/rag/chat" \
     ]
   }'
 
-echo -e "\nAll RAG tests completed!"
+printf '\nAll RAG tests completed!\n'

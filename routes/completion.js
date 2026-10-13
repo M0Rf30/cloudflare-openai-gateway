@@ -1,12 +1,15 @@
-import { MODEL_CONTEXT_WINDOWS, calculateDefaultMaxTokens, resolveModel, isOSSModel } from '../utils/models.js';
-import { processThink, extractOSSResponse, estimateTokens, getCORSHeaders } from '../utils/format.js';
+import { resolveModel } from '../utils/models.js';
+import { processThink, estimateTokens, normalizeAIResponse } from '../utils/format.js';
 import { createCompletionStreamTransformer } from '../utils/stream.js';
+import { applyStop, newResponseId, resolveGenerationParams } from '../utils/generation.js';
 import { asyncErrorHandler, ValidationError } from '../utils/errors.js';
+
+const IMPLICIT_THINK_MODELS = /deepseek-r1|qwq/i;
 
 export const completionHandler = asyncErrorHandler(async (request, env) => {
 	// Get the current time in epoch seconds
 	const created = Math.floor(Date.now() / 1000);
-	const uuid = crypto.randomUUID();
+	const id = newResponseId('cmpl');
 
 	if (!request.headers.get('Content-Type')?.includes('application/json')) {
 		throw new ValidationError('Invalid request. Content-Type must be application/json');
@@ -15,7 +18,7 @@ export const completionHandler = asyncErrorHandler(async (request, env) => {
 	const json = await request.json();
 
 	// Resolve model using shared helper
-	const model = resolveModel('completion', json?.model, env.MODEL_MAPPER ?? {});
+	const model = resolveModel('completion', json?.model);
 
 	// Validate prompt
 	if (!json?.prompt) {
@@ -26,121 +29,60 @@ export const completionHandler = asyncErrorHandler(async (request, env) => {
 		throw new ValidationError('prompt must be a string', 'prompt');
 	}
 
-	if (json.prompt.length === 0) {
-		throw new ValidationError('no prompt provided', 'prompt');
-	}
-
-	// Handle streaming
-	if (!json?.stream) json.stream = false;
-
-	// Handle max_tokens parameter with reasonable defaults and limits
-	const contextWindow = MODEL_CONTEXT_WINDOWS[model] || 4096;
-
-	let maxTokens;
-	if (typeof json.max_tokens === 'number' && json.max_tokens > 0) {
-		// Use provided value if it's a valid number (clamped to context window)
-		maxTokens = Math.max(1, Math.min(json.max_tokens, contextWindow));
-	} else {
-		// Use our helper function to calculate a sensible default
-		maxTokens = calculateDefaultMaxTokens(model);
-	}
-
-	// Handle other generation parameters
-	const temperature =
-		json?.temperature && typeof json.temperature === 'number'
-			? Math.max(0, Math.min(json.temperature, 2)) // Clamp between 0 and 2
-			: 0.7; // Default temperature
-
-	const topP =
-		json?.top_p && typeof json.top_p === 'number'
-			? Math.max(0, Math.min(json.top_p, 1)) // Clamp between 0 and 1
-			: 0.9; // Default top_p
+	const stream = json.stream === true;
+	const { maxTokens, params, stop, includeUsage } = resolveGenerationParams(json, model);
 
 	// Store the response model name (what client sent or resolved model)
 	const responseModel = json.model || model;
+	const promptTokens = estimateTokens(json.prompt);
 
-	// Handle streaming response
-	if (json.stream) {
-		const transformer = createCompletionStreamTransformer(uuid, created, responseModel);
+	// Run the AI model with configured parameters
+	const aiResp = await env.AI.run(model, { prompt: json.prompt, stream, ...params });
 
-		// Prepare AI parameters
-		const aiParams = {
-			stream: json.stream,
-			max_tokens: maxTokens,
-			temperature,
-			top_p: topP,
-		};
+	if (stream) {
+		const transformer = createCompletionStreamTransformer(id, created, responseModel, {
+			includeUsage,
+			stop,
+			implicitThink: IMPLICIT_THINK_MODELS.test(model),
+			maxTokens,
+			promptTokens,
+		});
 
-		// Special handling for OpenAI OSS models that require 'input' instead of 'prompt'
-		if (isOSSModel(model)) {
-			aiParams.input = json.prompt;
-		} else {
-			aiParams.prompt = json.prompt;
-		}
-
-		// Run the AI model with configured parameters
-		const aiResp = await env.AI.run(model, aiParams);
-
-		// Return streaming response
 		return new Response(aiResp.pipeThrough(transformer), {
 			headers: {
 				'Content-Type': 'text/event-stream',
 				'Cache-Control': 'no-cache',
 				'Connection': 'keep-alive',
-				...getCORSHeaders(),
-			},
-		});
-	} else {
-		// Non-streaming response
-		// Prepare AI parameters
-		const aiParams = {
-			max_tokens: maxTokens,
-			temperature,
-			top_p: topP,
-		};
-
-		// Special handling for OpenAI OSS models that require 'input' instead of 'prompt'
-		if (isOSSModel(model)) {
-			aiParams.input = json.prompt;
-		} else {
-			aiParams.prompt = json.prompt;
-		}
-
-		// Run the AI model with configured parameters
-		const aiResp = await env.AI.run(model, aiParams);
-
-		// Extract response text using shared helper
-		let responseText;
-		if (isOSSModel(model)) {
-			responseText = extractOSSResponse(aiResp);
-		} else {
-			responseText = aiResp.response || '';
-		}
-
-		const finalResponseText = processThink(responseText);
-
-		// Estimate token usage
-		const promptTokens = estimateTokens(json.prompt);
-		const completionTokens = estimateTokens(finalResponseText);
-
-		return Response.json({
-			id: uuid,
-			model: responseModel,
-			created,
-			object: 'text_completion',
-			choices: [
-				{
-					index: 0,
-					finish_reason: 'stop',
-					text: finalResponseText,
-					logprobs: null,
-				},
-			],
-			usage: {
-				prompt_tokens: promptTokens,
-				completion_tokens: completionTokens,
-				total_tokens: promptTokens + completionTokens,
 			},
 		});
 	}
+
+	// Non-streaming response
+	const normalized = normalizeAIResponse(aiResp);
+	const { text: finalResponseText, stopped } = applyStop(processThink(normalized.text), stop);
+
+	const completionTokens = normalized.usage?.completion_tokens ?? estimateTokens(finalResponseText);
+	const usage = normalized.usage ?? {
+		prompt_tokens: promptTokens,
+		completion_tokens: completionTokens,
+		total_tokens: promptTokens + completionTokens,
+	};
+
+	const hitLimit = normalized.finishReason === 'length' || (normalized.usage && completionTokens >= maxTokens);
+
+	return Response.json({
+		id,
+		model: responseModel,
+		created,
+		object: 'text_completion',
+		choices: [
+			{
+				index: 0,
+				finish_reason: !stopped && hitLimit ? 'length' : 'stop',
+				text: finalResponseText,
+				logprobs: null,
+			},
+		],
+		usage,
+	});
 });

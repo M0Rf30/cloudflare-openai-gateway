@@ -1,524 +1,484 @@
-// OpenAI-Compatible Audio Handler for Cloudflare Workers AI
-// Supports both TTS and STT with dynamic model selection
+// OpenAI-compatible Audio Handler for Cloudflare Workers AI
+// Speech-to-text, translation and text-to-speech. Every supported model has an explicit adapter
+// (input builder + output parser) matching its published Workers AI schema; models without an
+// adapter are rejected with a 400 instead of being sent input they cannot parse.
 
 import { storeFile, getFile, createCachedResponse } from '../utils/r2Storage.js';
-import {
-	arrayBufferToBase64,
-	getLanguageId,
-	createSegmentsFromWords,
-	formatSRTTime,
-	formatVTTTime,
-} from '../utils/format.js';
-import { MODEL_CATEGORIES, MODEL_MAPPING } from '../utils/models.js';
-import { asyncErrorHandler, ValidationError } from '../utils/errors.js';
+import { arrayBufferToBase64, createSegmentsFromWords } from '../utils/format.js';
+import { base64ToBytes, sha256Hex } from '../utils/binary.js';
+import { resolveModel } from '../utils/models.js';
+import { APIError, asyncErrorHandler, ServerError, ValidationError } from '../utils/errors.js';
 
-// Available Cloudflare Workers AI models
-const AVAILABLE_MODELS = {
-	stt: MODEL_CATEGORIES.audio_stt,
-	tts: MODEL_CATEGORIES.audio_tts,
-	translation: MODEL_CATEGORIES.audio_translation,
-	language_detection: MODEL_CATEGORIES.audio_language_detection,
-};
+// OpenAI's upload limit.
+const MAX_AUDIO_BYTES = 25 * 1024 * 1024;
+// @cf/openai/whisper and whisper-tiny-en take the audio as a JSON array of byte values, which costs
+// several bytes of isolate memory per input byte; keep that path small.
+const MAX_LEGACY_WHISPER_BYTES = 2 * 1024 * 1024;
+// OpenAI's maximum TTS input length.
+const MAX_TTS_INPUT_CHARS = 4096;
+const TTS_CACHE_CONTROL = 'private, max-age=86400';
 
-// OpenAI-compatible voices for TTS (mapped to language codes for MeloTTS)
-// OpenAI has 6 voices: alloy, echo, fable, onyx, nova, shimmer
-// We map them to different languages for variety since MeloTTS doesn't have voice timbres
-const VOICE_MAPPING = {
-	alloy: 'en', // Default English voice
-	echo: 'fr', // French voice
-	fable: 'en', // English voice
-	onyx: 'es', // Spanish voice
-	nova: 'en', // English voice
-	shimmer: 'zh', // Chinese voice
-};
+// --- Speech-to-text adapters --------------------------------------------------
 
-const VOICES = Object.keys(VOICE_MAPPING);
+const numberOrUndefined = value => (typeof value === 'number' ? value : undefined);
 
-// Utility function to validate model and convert to Cloudflare format
-function validateModel(type, modelName) {
-	// First try to map OpenAI model names to Cloudflare paths
-	const cloudflareModel = MODEL_MAPPING[modelName] || modelName;
-
-	if (!AVAILABLE_MODELS[type] || !AVAILABLE_MODELS[type].includes(cloudflareModel)) {
-		// Get available OpenAI-compatible model names for error message
-		const availableOpenAINames = Object.keys(MODEL_MAPPING).filter(key => {
-			const cfModel = MODEL_MAPPING[key];
-			return AVAILABLE_MODELS[type]?.includes(cfModel);
-		});
-		const allAvailable = [...availableOpenAINames, ...AVAILABLE_MODELS[type]];
-
-		throw new Error(`Invalid ${type} model: ${modelName}. Available models: ${allAvailable.join(', ')}`);
-	}
-	return cloudflareModel;
+/** Normalise a Whisper-style segment list (id from index, optional OpenAI diagnostics passed through). */
+function normaliseSegments(rawSegments) {
+	return rawSegments.map((segment, index) => {
+		const out = { id: index, start: segment.start, end: segment.end, text: segment.text ?? '' };
+		for (const key of ['temperature', 'avg_logprob', 'compression_ratio', 'no_speech_prob']) {
+			if (numberOrUndefined(segment[key]) !== undefined) out[key] = segment[key];
+		}
+		return out;
+	});
 }
 
-// OpenAI-compatible transcription handler
+const normaliseWords = rawWords =>
+	rawWords.map(w => ({ word: String(w.word ?? '').trim(), start: w.start, end: w.end }));
+
+/** Last known timestamp, used when a model does not report the audio duration. */
+function lastEnd(words, segments) {
+	return segments.at(-1)?.end ?? words.at(-1)?.end ?? 0;
+}
+
+const turboAdapter = {
+	translate: 'native',
+	async buildInput({ file, language, prompt, task }) {
+		const input = { audio: arrayBufferToBase64(await file.arrayBuffer()) };
+		if (task === 'translate') input.task = 'translate';
+		if (language) input.language = language;
+		if (prompt) input.initial_prompt = prompt;
+		return input;
+	},
+	parse(response, { language }) {
+		const segments = normaliseSegments(Array.isArray(response.segments) ? response.segments : []);
+		const words = normaliseWords((response.segments ?? []).flatMap(s => s.words ?? []));
+		return {
+			text: response.text ?? '',
+			language: response.transcription_info?.language ?? language ?? 'unknown',
+			duration: response.transcription_info?.duration ?? lastEnd(words, segments),
+			words,
+			segments,
+			vtt: response.vtt,
+		};
+	},
+};
+
+const legacyWhisperAdapter = (translate, fixedLanguage) => ({
+	translate,
+	maxBytes: MAX_LEGACY_WHISPER_BYTES,
+	async buildInput({ file }) {
+		return { audio: Array.from(new Uint8Array(await file.arrayBuffer())) };
+	},
+	parse(response, { language }) {
+		const words = normaliseWords(Array.isArray(response.words) ? response.words : []);
+		const segments = createSegmentsFromWords(words);
+		return {
+			text: response.text ?? '',
+			language: response.transcription_info?.language ?? fixedLanguage ?? language ?? 'unknown',
+			duration: lastEnd(words, segments),
+			words,
+			segments,
+			vtt: response.vtt,
+		};
+	},
+});
+
+const novaAdapter = {
+	translate: 'none',
+	async buildInput({ file, language }) {
+		const input = {
+			// Streamed straight from the upload: no copy of the audio in isolate memory.
+			audio: { body: file.stream(), contentType: file.type || 'application/octet-stream' },
+		};
+		if (language) input.language = language;
+		return input;
+	},
+	parse(response, { language }) {
+		const alternative = response.results?.channels?.[0]?.alternatives?.[0] ?? {};
+		const words = normaliseWords(alternative.words ?? []);
+		const segments = createSegmentsFromWords(words);
+		return {
+			text: alternative.transcript ?? '',
+			language: language ?? 'unknown',
+			duration: lastEnd(words, segments),
+			words,
+			segments,
+			vtt: undefined,
+		};
+	},
+};
+
+const STT_ADAPTERS = {
+	'@cf/openai/whisper-large-v3-turbo': turboAdapter,
+	// Original Whisper does not report the spoken language; translation needs it from the client.
+	'@cf/openai/whisper': legacyWhisperAdapter('chain'),
+	'@cf/openai/whisper-tiny-en': legacyWhisperAdapter('none', 'en'),
+	'@cf/deepgram/nova-3': novaAdapter,
+};
+
+function getSttAdapter(model) {
+	const adapter = STT_ADAPTERS[model];
+	if (!adapter) {
+		throw new ValidationError(
+			`Model ${model} is not supported by this endpoint. Supported: ${Object.keys(STT_ADAPTERS).join(', ')}`,
+			'model',
+		);
+	}
+	return adapter;
+}
+
+// --- Request parsing ----------------------------------------------------------
+
+function requireMultipart(request) {
+	if (!request.headers.get('Content-Type')?.includes('multipart/form-data')) {
+		throw new ValidationError('Content-Type must be multipart/form-data');
+	}
+}
+
+function readAudioFile(formData, maxBytes = MAX_AUDIO_BYTES) {
+	const file = formData.get('file');
+	if (file === null || file === undefined || file === '') {
+		throw new ValidationError('No audio file provided', 'file');
+	}
+	if (typeof file === 'string' || typeof file.arrayBuffer !== 'function') {
+		throw new ValidationError('file must be an uploaded audio file', 'file');
+	}
+	if (file.size === 0) {
+		throw new ValidationError('Audio file is empty', 'file');
+	}
+	if (file.size > maxBytes) {
+		throw new APIError(
+			`Audio file exceeds the ${Math.floor(maxBytes / (1024 * 1024))} MB limit for this model`,
+			'invalid_request_error',
+			413,
+		);
+	}
+	return file;
+}
+
+const optionalString = (formData, name) => {
+	const value = formData.get(name);
+	return typeof value === 'string' && value.length > 0 ? value : undefined;
+};
+
+function readGranularities(formData) {
+	// OpenAI SDKs send the array form `timestamp_granularities[]`.
+	const values = [...formData.getAll('timestamp_granularities[]'), ...formData.getAll('timestamp_granularities')];
+	for (const value of values) {
+		if (value !== 'word' && value !== 'segment') {
+			throw new ValidationError('timestamp_granularities must contain only "word" and/or "segment"', 'timestamp_granularities');
+		}
+	}
+	return new Set(values);
+}
+
+const RESPONSE_FORMATS = ['json', 'text', 'srt', 'verbose_json', 'vtt'];
+
+function readResponseFormat(formData) {
+	const format = optionalString(formData, 'response_format') ?? 'json';
+	if (!RESPONSE_FORMATS.includes(format)) {
+		throw new ValidationError(`response_format must be one of: ${RESPONSE_FORMATS.join(', ')}`, 'response_format');
+	}
+	return format;
+}
+
+function validateTemperature(formData) {
+	const raw = optionalString(formData, 'temperature');
+	if (raw !== undefined) {
+		const value = Number(raw);
+		if (!Number.isFinite(value) || value < 0 || value > 1) {
+			throw new ValidationError('temperature must be a number between 0 and 1', 'temperature');
+		}
+	}
+}
+
+// --- Output formatting --------------------------------------------------------
+
+const pad = (value, width = 2) => String(value).padStart(width, '0');
+
+function formatTimestamp(seconds, separator) {
+	const total = Math.max(0, Math.round((Number(seconds) || 0) * 1000));
+	const hours = Math.floor(total / 3600000);
+	const minutes = Math.floor((total % 3600000) / 60000);
+	const secs = Math.floor((total % 60000) / 1000);
+	return `${pad(hours)}:${pad(minutes)}:${pad(secs)}${separator}${pad(total % 1000, 3)}`;
+}
+
+function buildSubtitles(result, format) {
+	let segments = result.segments;
+	if (segments.length === 0 && result.text.trim()) {
+		// No timing information at all: emit one cue spanning the whole clip.
+		segments = [{ start: 0, end: result.duration, text: result.text }];
+	}
+	const separator = format === 'srt' ? ',' : '.';
+	const cues = segments.map((segment, index) => {
+		const timing = `${formatTimestamp(segment.start, separator)} --> ${formatTimestamp(segment.end, separator)}`;
+		const text = String(segment.text).trim();
+		return format === 'srt' ? `${index + 1}\n${timing}\n${text}\n` : `${timing}\n${text}\n`;
+	});
+	return format === 'srt' ? cues.join('\n') : `WEBVTT\n\n${cues.join('\n')}`;
+}
+
+function formatTranscript(result, { format, task, granularities }) {
+	switch (format) {
+	case 'text':
+		return new Response(result.text, { headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
+	case 'srt':
+		return new Response(buildSubtitles(result, 'srt'), { headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
+	case 'vtt':
+		return new Response(result.vtt || buildSubtitles(result, 'vtt'), {
+			headers: { 'Content-Type': 'text/vtt; charset=utf-8' },
+		});
+	case 'verbose_json': {
+		const body = { task, language: result.language, duration: result.duration, text: result.text };
+		const wantWords = granularities.has('word');
+		// OpenAI returns segments unless only word timestamps were requested.
+		const wantSegments = granularities.has('segment') || !wantWords;
+		if (wantWords) body.words = result.words;
+		if (wantSegments) body.segments = result.segments;
+		return Response.json(body);
+	}
+	default:
+		return Response.json({ text: result.text });
+	}
+}
+
+// --- Handlers: transcription / translation -----------------------------------
+
 // POST /audio/transcriptions
 export const transcriptionHandler = asyncErrorHandler(async (request, env) => {
-	// Check content type
-	if (!request.headers.get('Content-Type')?.includes('multipart/form-data')) {
-		throw new ValidationError('Content-Type must be multipart/form-data');
-	}
-
+	requireMultipart(request);
 	const formData = await request.formData();
 
-	// OpenAI-compatible parameters
-	const file = formData.get('file');
-	const model = formData.get('model') || 'whisper-1';
-	const prompt = formData.get('prompt'); // Optional context
-	const response_format = formData.get('response_format') || 'json';
-	const temperature = formData.get('temperature') ? parseFloat(formData.get('temperature')) : 0;
-	const language = formData.get('language'); // Optional language hint
-	const timestamp_granularities = formData.get('timestamp_granularities'); // 'word' or 'segment'
+	const model = resolveModel('audio_stt', optionalString(formData, 'model'));
+	const adapter = getSttAdapter(model);
+	const file = readAudioFile(formData, adapter.maxBytes);
+	const format = readResponseFormat(formData);
+	const granularities = readGranularities(formData);
+	validateTemperature(formData);
+	const language = optionalString(formData, 'language');
+	const prompt = optionalString(formData, 'prompt');
 
-	if (!file) {
-		throw new ValidationError('No audio file provided');
-	}
+	const input = await adapter.buildInput({ file, language, prompt, task: 'transcribe' });
+	const response = await env.AI.run(model, input);
+	const result = adapter.parse(response ?? {}, { language });
 
-	// Validate model
-	let modelPath;
-	try {
-		modelPath = validateModel('stt', model);
-	} catch (error) {
-		throw new ValidationError(error.message);
-	}
-
-	// Convert audio to required format for Cloudflare Whisper
-	const blob = await file.arrayBuffer();
-
-	// Prepare input based on model type
-	let input;
-	if (modelPath === '@cf/openai/whisper-large-v3-turbo') {
-		// For whisper-large-v3-turbo, use base64 format
-		input = {
-			audio: arrayBufferToBase64(blob),
-		};
-
-		// Add optional parameters supported by whisper-large-v3-turbo
-		if (language) {
-			input.language = language;
-		}
-		if (prompt) {
-			input.prompt = prompt;
-		}
-		if (temperature !== undefined && temperature !== 0) {
-			input.temperature = temperature;
-		}
-		// Add timestamp granularities if specified
-		if (timestamp_granularities) {
-			input.timestamp_granularities = [timestamp_granularities];
-		}
-	} else {
-		// For older whisper models, use array format
-		input = {
-			audio: [...new Uint8Array(blob)],
-		};
-	}
-
-	const response = await env.AI.run(modelPath, input);
-
-	// Handle different response formats based on model
-	let transcriptionText;
-	let words = [];
-	let segments = [];
-
-	if (modelPath === '@cf/openai/whisper-large-v3-turbo') {
-		// whisper-large-v3-turbo returns OpenAI-compatible format
-		transcriptionText = response.text || '';
-
-		// Handle word-level timestamps
-		if (response.words && Array.isArray(response.words)) {
-			words = response.words.map(wordData => ({
-				word: wordData.word,
-				start: wordData.start,
-				end: wordData.end,
-			}));
-		}
-
-		// Handle segment-level timestamps
-		if (response.segments && Array.isArray(response.segments)) {
-			segments = response.segments.map(segmentData => ({
-				id: segmentData.id,
-				start: segmentData.start,
-				end: segmentData.end,
-				text: segmentData.text,
-			}));
-		}
-	} else {
-		// Older whisper models format
-		transcriptionText = response.text || '';
-
-		// Handle legacy format with word_count, words, vtt
-		if (response.words && Array.isArray(response.words)) {
-			words = response.words.map(wordData => ({
-				word: wordData.word,
-				start: wordData.start,
-				end: wordData.end,
-			}));
-		}
-	}
-
-	// Format response based on response_format
-	switch (response_format) {
-	case 'json': {
-		// OpenAI compatible response format
-		const jsonResponse = {
-			text: transcriptionText,
-		};
-
-		// Add word-level timestamps if requested and available
-		if (timestamp_granularities === 'word' && words.length > 0) {
-			jsonResponse.words = words;
-		}
-
-		// Add segments if available or create from words
-		if (timestamp_granularities === 'segment') {
-			if (segments.length > 0) {
-				jsonResponse.segments = segments;
-			} else if (words.length > 0) {
-				// Create basic segments from words (group by sentences or time chunks)
-				const createdSegments = [];
-				let currentSegment = {
-					id: 0,
-					start: words[0].start,
-					end: words[0].end,
-					text: '',
-				};
-
-				words.forEach((wordData, index) => {
-					currentSegment.text += (currentSegment.text ? ' ' : '') + wordData.word;
-					currentSegment.end = wordData.end;
-
-					// Create new segment on sentence end or every 10 words
-					if (
-						wordData.word.endsWith('.') ||
-							wordData.word.endsWith('!') ||
-							wordData.word.endsWith('?') ||
-							index % 10 === 9 ||
-							index === words.length - 1
-					) {
-						createdSegments.push({ ...currentSegment });
-						if (index < words.length - 1) {
-							currentSegment = {
-								id: createdSegments.length,
-								start: words[index + 1].start,
-								end: words[index + 1].end,
-								text: '',
-							};
-						}
-					}
-				});
-
-				jsonResponse.segments = createdSegments;
-			}
-		}
-
-		return Response.json(jsonResponse);
-	}
-	case 'text':
-		return new Response(transcriptionText, {
-			headers: { 'Content-Type': 'text/plain' },
-		});
-
-	case 'srt': {
-		// Convert to SRT format using word timings or segments
-		const srtSegments = segments.length > 0 ? segments : createSegmentsFromWords(words);
-		if (srtSegments.length > 0) {
-			let srtContent = '';
-			srtSegments.forEach((segment, index) => {
-				const startTime = formatSRTTime(segment.start);
-				const endTime = formatSRTTime(segment.end);
-				srtContent += `${index + 1}\n${startTime} --> ${endTime}\n${segment.text}\n\n`;
-			});
-			return new Response(srtContent, {
-				headers: { 'Content-Type': 'text/plain' },
-			});
-		}
-		return new Response(transcriptionText, {
-			headers: { 'Content-Type': 'text/plain' },
-		});
-	}
-	case 'vtt': {
-		// Use existing VTT output or create from segments/words
-		if (response.vtt) {
-			return new Response(response.vtt, {
-				headers: { 'Content-Type': 'text/vtt' },
-			});
-		} else {
-			const vttSegments = segments.length > 0 ? segments : createSegmentsFromWords(words);
-			if (vttSegments.length > 0) {
-				let vttContent = 'WEBVTT\n\n';
-				vttSegments.forEach(segment => {
-					const startTime = formatVTTTime(segment.start);
-					const endTime = formatVTTTime(segment.end);
-					vttContent += `${startTime} --> ${endTime}\n${segment.text}\n\n`;
-				});
-				return new Response(vttContent, {
-					headers: { 'Content-Type': 'text/vtt' },
-				});
-			}
-		}
-		return new Response(transcriptionText, {
-			headers: { 'Content-Type': 'text/plain' },
-		});
-	}
-
-	case 'verbose_json': {
-		// Return detailed response with all available information
-		const verboseResponse = {
-			task: 'transcribe',
-			language: response.language || 'en',
-			duration: response.duration || 0,
-			text: transcriptionText,
-		};
-
-		if (words.length > 0) {
-			verboseResponse.words = words;
-		}
-
-		if (segments.length > 0) {
-			verboseResponse.segments = segments;
-		}
-
-		return Response.json(verboseResponse);
-	}
-
-	default:
-		return Response.json({
-			text: transcriptionText,
-		});
-	}
+	return formatTranscript(result, { format, task: 'transcribe', granularities });
 });
 
-// OpenAI-compatible translation handler
-// POST /audio/translations
+// POST /audio/translations (always translates into English)
 export const translationHandler = asyncErrorHandler(async (request, env) => {
-	if (!request.headers.get('Content-Type')?.includes('multipart/form-data')) {
-		throw new ValidationError('Content-Type must be multipart/form-data');
-	}
-
+	requireMultipart(request);
 	const formData = await request.formData();
 
-	// OpenAI-compatible parameters
-	const file = formData.get('file');
-	const model = formData.get('model') || 'whisper-1';
-	const prompt = formData.get('prompt'); // Optional context
-	const response_format = formData.get('response_format') || 'json';
-	const temperature = formData.get('temperature') ? parseFloat(formData.get('temperature')) : 0;
+	const model = resolveModel('audio_stt', optionalString(formData, 'model'));
+	const adapter = getSttAdapter(model);
+	if (adapter.translate === 'none') {
+		throw new ValidationError(`Model ${model} cannot translate audio. Use whisper-1 (whisper-large-v3-turbo).`, 'model');
+	}
+	const file = readAudioFile(formData, adapter.maxBytes);
+	const format = readResponseFormat(formData);
+	const granularities = readGranularities(formData);
+	validateTemperature(formData);
+	const language = optionalString(formData, 'language');
+	const prompt = optionalString(formData, 'prompt');
 
-	if (!file) {
-		throw new ValidationError('No audio file provided');
+	if (adapter.translate === 'native') {
+		// whisper-large-v3-turbo translates in a single call.
+		const input = await adapter.buildInput({ file, language, prompt, task: 'translate' });
+		const result = adapter.parse((await env.AI.run(model, input)) ?? {}, { language });
+		return formatTranscript({ ...result, language: 'english' }, { format, task: 'translate', granularities });
 	}
 
-	// Validate models
-	const sttModelPath = validateModel('stt', model);
-	const translationModelPath = '@cf/meta/m2m100-1.2b';
+	// Legacy Whisper cannot translate and does not report the spoken language: transcribe, then run
+	// m2m100 with the source language supplied by the client via `language`.
+	const sourceLanguage = language?.toLowerCase();
+	if (!sourceLanguage || !/^[a-z]{2,3}$/.test(sourceLanguage)) {
+		throw new ValidationError(
+			`Model ${model} does not report the spoken language. Pass \`language\` (ISO code, e.g. "es") or use whisper-large-v3-turbo.`,
+			'language',
+		);
+	}
+	const transcribeInput = await adapter.buildInput({ file, language: sourceLanguage, prompt, task: 'transcribe' });
+	const transcription = adapter.parse((await env.AI.run(model, transcribeInput)) ?? {}, { language: sourceLanguage });
 
-	// Step 1: Transcribe audio using Cloudflare Whisper
-	const blob = await file.arrayBuffer();
-
-	// Prepare input based on model type
-	let transcriptionInput;
-	if (sttModelPath === '@cf/openai/whisper-large-v3-turbo') {
-		transcriptionInput = {
-			audio: arrayBufferToBase64(blob),
-		};
-		if (prompt) {
-			transcriptionInput.prompt = prompt;
+	let translatedText = transcription.text;
+	if (sourceLanguage !== 'en') {
+		const translation = await env.AI.run('@cf/meta/m2m100-1.2b', {
+			text: transcription.text,
+			source_lang: sourceLanguage,
+			target_lang: 'en',
+		});
+		if (typeof translation?.translated_text !== 'string') {
+			throw new ServerError('Translation failed');
 		}
-		if (temperature !== undefined && temperature !== 0) {
-			transcriptionInput.temperature = temperature;
-		}
-	} else {
-		transcriptionInput = {
-			audio: [...new Uint8Array(blob)],
-		};
+		translatedText = translation.translated_text;
 	}
 
-	const transcriptionResponse = await env.AI.run(sttModelPath, transcriptionInput);
-
-	// Step 2: Detect language using LLM
-	const languageDetectionResponse = await env.AI.run('@cf/meta/llama-2-7b-chat-int8', {
-		messages: [
-			{
-				role: 'user',
-				content:
-					"Output one of the following: english, chinese, french, spanish, arabic, russian, german, japanese, portuguese, hindi. Identify the following languages.\nQ:'Hola mi nombre es brian y el tuyo?'",
-			},
-			{ role: 'assistant', content: 'spanish' },
-			{ role: 'user', content: 'Was für ein schönes Baby!' },
-			{ role: 'assistant', content: 'german' },
-			{ role: 'user', content: transcriptionResponse.text },
-		],
-	});
-
-	const detectedLanguage = getLanguageId(languageDetectionResponse.response);
-
-	// Step 3: Translate to English (OpenAI translations are always to English)
-	let translatedText = transcriptionResponse.text;
-	if (detectedLanguage !== 'english') {
-		const translationResponse = await env.AI.run(translationModelPath, {
-			text: transcriptionResponse.text,
-			source_lang: detectedLanguage,
-			target_lang: 'english',
-		});
-
-		if (!translationResponse.translated_text) {
-			throw new Error('Translation failed');
-		}
-
-		translatedText = translationResponse.translated_text;
-	}
-
-	// Format response based on response_format
-	switch (response_format) {
-	case 'json':
-		return Response.json({
-			text: translatedText,
-			language: detectedLanguage,
-		});
-
-	case 'text':
-		return new Response(translatedText, {
-			headers: { 'Content-Type': 'text/plain' },
-		});
-
-	case 'srt':
-	case 'vtt':
-		return new Response(translatedText, {
-			headers: { 'Content-Type': 'text/plain' },
-		});
-
-	default:
-		return Response.json({
-			text: translatedText,
-		});
-	}
+	// Segment timings belong to the source language, so they are not reused for the translation.
+	return formatTranscript(
+		{ ...transcription, text: translatedText, language: 'english', segments: [], words: [], vtt: undefined },
+		{ format, task: 'translate', granularities },
+	);
 });
 
-// OpenAI-compatible TTS handler
+// --- Text-to-speech adapters --------------------------------------------------
+
+// OpenAI voices -> MeloTTS has no timbres, so voices select the language instead.
+const MELO_VOICE_LANGUAGE = {
+	alloy: 'en',
+	echo: 'fr',
+	fable: 'en',
+	onyx: 'es',
+	nova: 'en',
+	shimmer: 'zh',
+};
+
+const OPENAI_VOICES = Object.keys(MELO_VOICE_LANGUAGE);
+
+/** OpenAI response_format -> Deepgram Aura encoding/container + resulting content type. */
+const AURA_FORMATS = {
+	mp3: { params: { encoding: 'mp3' }, contentType: 'audio/mpeg', extension: 'mp3' },
+	opus: { params: { encoding: 'opus', container: 'ogg' }, contentType: 'audio/ogg', extension: 'ogg' },
+	aac: { params: { encoding: 'aac' }, contentType: 'audio/aac', extension: 'aac' },
+	flac: { params: { encoding: 'flac' }, contentType: 'audio/flac', extension: 'flac' },
+	wav: { params: { encoding: 'linear16', container: 'wav' }, contentType: 'audio/wav', extension: 'wav' },
+	pcm: { params: { encoding: 'linear16', container: 'none' }, contentType: 'audio/pcm', extension: 'pcm' },
+};
+
+const MELO_FORMATS = {
+	mp3: { contentType: 'audio/mpeg', extension: 'mp3' },
+};
+
+const auraAdapter = (speakers, openaiVoices) => ({
+	formats: AURA_FORMATS,
+	voices: [...Object.keys(openaiVoices), ...speakers],
+	buildInput({ input, voice, format }) {
+		const speaker = openaiVoices[voice] ?? voice;
+		return { text: input, speaker, ...AURA_FORMATS[format].params };
+	},
+});
+
+const TTS_ADAPTERS = {
+	'@cf/myshell-ai/melotts': {
+		formats: MELO_FORMATS,
+		voices: OPENAI_VOICES,
+		buildInput: ({ input, voice }) => ({ prompt: input, lang: MELO_VOICE_LANGUAGE[voice] }),
+	},
+	'@cf/deepgram/aura-1': auraAdapter(
+		['angus', 'asteria', 'arcas', 'orion', 'orpheus', 'athena', 'luna', 'zeus', 'perseus', 'helios', 'hera', 'stella'],
+		{ alloy: 'asteria', echo: 'orion', fable: 'angus', onyx: 'zeus', nova: 'luna', shimmer: 'stella' },
+	),
+	'@cf/deepgram/aura-2-en': auraAdapter(
+		[
+			'amalthea', 'andromeda', 'apollo', 'arcas', 'aries', 'asteria', 'athena', 'atlas', 'aurora', 'callista',
+			'cora', 'cordelia', 'delia', 'draco', 'electra', 'harmonia', 'helena', 'hera', 'hermes', 'hyperion',
+			'iris', 'janus', 'juno', 'jupiter', 'luna', 'mars', 'minerva', 'neptune', 'odysseus', 'ophelia',
+			'orion', 'orpheus', 'pandora', 'phoebe', 'pluto', 'saturn', 'thalia', 'theia', 'vesta', 'zeus',
+		],
+		{ alloy: 'asteria', echo: 'orion', fable: 'apollo', onyx: 'zeus', nova: 'luna', shimmer: 'hera' },
+	),
+	'@cf/deepgram/aura-2-es': auraAdapter(
+		['sirio', 'nestor', 'carina', 'celeste', 'alvaro', 'diana', 'aquila', 'selena', 'estrella', 'javier'],
+		{ alloy: 'aquila', echo: 'alvaro', fable: 'nestor', onyx: 'sirio', nova: 'carina', shimmer: 'celeste' },
+	),
+};
+
+/** Turn any TTS model output (base64 JSON, stream, buffer) into a ReadableStream or Uint8Array. */
+function readSpeechOutput(response) {
+	if (response instanceof ReadableStream) return response;
+	if (response instanceof Response) return response.body;
+	if (response instanceof ArrayBuffer) return new Uint8Array(response);
+	if (ArrayBuffer.isView(response)) return new Uint8Array(response.buffer, response.byteOffset, response.byteLength);
+	if (typeof response?.audio === 'string') return base64ToBytes(response.audio);
+	throw new ServerError('Text-to-speech model returned an unexpected response');
+}
+
+const ttsHeaders = (contentType, extension) => ({
+	'Content-Type': contentType,
+	'Content-Disposition': `attachment; filename="speech.${extension}"`,
+	'Cache-Control': TTS_CACHE_CONTROL,
+});
+
 // POST /audio/speech
-export const speechHandler = asyncErrorHandler(async (request, env) => {
+export const speechHandler = asyncErrorHandler(async (request, env, ctx) => {
 	const body = await request.json();
-
-	// OpenAI-compatible parameters
-	const { model = 'tts-1', input, voice = 'alloy', response_format = 'mp3' } = body;
-
-	if (!input) {
-		throw new ValidationError('No input text provided');
+	if (!body || typeof body !== 'object') {
+		throw new ValidationError('Request body must be a JSON object');
 	}
 
-	// Validate voice
-	if (!VOICES.includes(voice)) {
-		throw new ValidationError(`Invalid voice. Must be one of: ${VOICES.join(', ')}`);
+	const { input, voice = 'alloy', response_format = 'mp3', speed } = body;
+
+	if (typeof input !== 'string' || input.length === 0) {
+		throw new ValidationError('No input text provided', 'input');
+	}
+	if (input.length > MAX_TTS_INPUT_CHARS) {
+		throw new ValidationError(`input must be at most ${MAX_TTS_INPUT_CHARS} characters`, 'input');
 	}
 
-	// Validate model
-	const modelPath = validateModel('tts', model);
-
-	// Prepare input based on the model
-	// Different TTS models expect different parameter formats
-	let aiInput;
-
-	if (modelPath === '@cf/deepgram/aura-1') {
-		// Deepgram Aura expects 'text' parameter
-		aiInput = {
-			text: input,
-		};
-	} else {
-		// MeloTTS expects 'prompt' and 'lang' parameters
-		aiInput = {
-			prompt: input,
-			lang: VOICE_MAPPING[voice] || 'en', // Map voice to language code
-		};
-	}
-
-	// Note: MeloTTS doesn't support speed parameter according to the documentation
-	// If speed is needed, it would require post-processing
-
-	// Check if already cached in R2 (for large audio files)
-	let audioKey = null;
-
-	if (env.AUDIO_BUCKET) {
-		// Generate a cache key based on input parameters
-		const cacheKey = await crypto.subtle.digest(
-			'SHA-256',
-			new TextEncoder().encode(`${model}:${input}:${voice}:${response_format}`),
+	const model = resolveModel('audio_tts', body.model);
+	const adapter = TTS_ADAPTERS[model];
+	if (!adapter) {
+		throw new ValidationError(
+			`Model ${model} is not supported by this endpoint. Supported: ${Object.keys(TTS_ADAPTERS).join(', ')}`,
+			'model',
 		);
-		const cacheKeyHex = Array.from(new Uint8Array(cacheKey))
-			.map(b => b.toString(16).padStart(2, '0'))
-			.join('');
+	}
 
-		audioKey = `tts/${cacheKeyHex.substring(0, 16)}.mp3`;
+	if (typeof voice !== 'string' || !adapter.voices.includes(voice)) {
+		throw new ValidationError(`Invalid voice. Must be one of: ${adapter.voices.join(', ')}`, 'voice');
+	}
 
-		// Check if audio already exists in R2
-		const cachedAudio = await getFile(env.AUDIO_BUCKET, audioKey);
-		if (cachedAudio) {
-			return createCachedResponse(cachedAudio, request, { waitUntil: () => {} });
+	const format = adapter.formats[response_format];
+	if (!format) {
+		throw new ValidationError(
+			`response_format ${JSON.stringify(response_format)} is not supported by ${model}. Supported: ${Object.keys(adapter.formats).join(', ')}`,
+			'response_format',
+		);
+	}
+
+	if (speed !== undefined && speed !== null) {
+		if (typeof speed !== 'number' || speed < 0.25 || speed > 4) {
+			throw new ValidationError('speed must be a number between 0.25 and 4.0', 'speed');
+		}
+		if (speed !== 1) {
+			throw new ValidationError(`${model} does not support the speed parameter`, 'speed');
 		}
 	}
 
-	let response;
-	try {
-		response = await env.AI.run(modelPath, aiInput);
-	} catch (error) {
-		// If we get a language-related error, try with English as fallback
-		if (error.message && error.message.includes('8002')) {
-			// Try again with English
-			const fallbackInput = {
-				...aiInput,
-				lang: 'en',
-			};
-			response = await env.AI.run(modelPath, fallbackInput);
+	// Cache policy: every generated clip is stored in R2 (when bound) under a key derived from all
+	// parameters that influence the audio, and served from there on the next identical request.
+	let audioKey = null;
+	if (env.AUDIO_BUCKET) {
+		const digest = await sha256Hex(JSON.stringify([model, voice, response_format, input]));
+		audioKey = `tts/${digest.slice(0, 32)}.${format.extension}`;
+		const cached = await getFile(env.AUDIO_BUCKET, audioKey);
+		if (cached) {
+			const response = createCachedResponse(cached, request);
+			response.headers.set('Content-Disposition', `attachment; filename="speech.${format.extension}"`);
+			return response;
+		}
+	}
+
+	const aiResponse = await env.AI.run(model, adapter.buildInput({ input, voice, format: response_format }));
+	let audio = readSpeechOutput(aiResponse);
+
+	if (audioKey) {
+		if (audio instanceof ReadableStream) {
+			audio = new Uint8Array(await new Response(audio).arrayBuffer());
+		}
+		const store = storeFile(env.AUDIO_BUCKET, audioKey, audio, {
+			contentType: format.contentType,
+			cacheControl: TTS_CACHE_CONTROL,
+			custom: { model, voice, format: response_format, input: input.slice(0, 100) },
+		}).catch(error => console.error('Failed to store audio in R2:', error));
+		if (typeof ctx?.waitUntil === 'function') {
+			ctx.waitUntil(store);
 		} else {
-			throw error;
+			await store;
 		}
 	}
 
-	// MeloTTS returns either:
-	// 1. JSON with base64-encoded audio: { audio: "base64string" }
-	// 2. Direct binary MP3 data
-
-	let audioData;
-
-	// Check if response is JSON with base64 audio
-	if (response && typeof response === 'object' && response.audio) {
-		// Base64 encoded audio
-		audioData = Uint8Array.from(atob(response.audio), c => c.charCodeAt(0));
-	} else {
-		// Direct binary data
-		audioData = response;
-	}
-
-	// MeloTTS only produces MP3; every response_format is served as MP3 until conversion exists.
-	const contentType = 'audio/mpeg';
-	const filename = 'speech.mp3';
-
-	// Store large audio files in R2 if bucket is available
-	if (env.AUDIO_BUCKET && audioKey && audioData.byteLength > 1024 * 1024) {
-		// Store files > 1MB
-		try {
-			await storeFile(env.AUDIO_BUCKET, audioKey, audioData, {
-				contentType,
-				custom: {
-					model,
-					input: input.substring(0, 100), // Store truncated input for reference
-					voice,
-					format: response_format,
-				},
-			});
-		} catch (error) {
-			console.error('Failed to store audio in R2:', error);
-			// Continue without storing, just serve the file
-		}
-	}
-
-	// Return audio as blob
-	return new Response(audioData, {
-		headers: {
-			'Content-Type': contentType,
-			'Content-Disposition': `attachment; filename="${filename}"`,
-			'Cache-Control': 'public, max-age=3600',
-		},
-	});
+	return new Response(audio, { headers: ttsHeaders(format.contentType, format.extension) });
 });

@@ -54,13 +54,17 @@ describe('Chat Handler', () => {
 					controller.enqueue('data: [DONE]\n\n');
 					controller.close();
 				},
-			})
+			}),
 		);
 
 		const response = await chatHandler(mockRequest, mockEnv);
 
 		expect(response.status).toBe(200);
 		expect(response.headers.get('Content-Type')).toBe('text/event-stream');
+
+		const body = await response.text();
+		expect(body).toContain('"content":"Hello!"');
+		expect(body.trimEnd().endsWith('data: [DONE]')).toBe(true);
 	});
 
 	it('should handle system messages', async () => {
@@ -86,7 +90,7 @@ describe('Chat Handler', () => {
 					expect.objectContaining({ role: 'system' }),
 					expect.objectContaining({ role: 'user' }),
 				]),
-			})
+			}),
 		);
 	});
 
@@ -107,7 +111,7 @@ describe('Chat Handler', () => {
 			expect.any(String),
 			expect.objectContaining({
 				max_tokens: 100,
-			})
+			}),
 		);
 	});
 
@@ -149,7 +153,7 @@ describe('Chat Handler', () => {
 			expect.any(String),
 			expect.objectContaining({
 				temperature: 0.7,
-			})
+			}),
 		);
 	});
 });

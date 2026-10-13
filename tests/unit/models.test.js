@@ -139,4 +139,41 @@ describe('Models Handler', () => {
 
 		expect(response.status).toBe(200);
 	});
+
+	it('should report created in seconds', async () => {
+		fetch.mockResolvedValue({ ok: true, json: () => Promise.resolve(mockApiResponse) });
+
+		const response = await modelsHandler({}, mockEnv);
+		const result = await response.json();
+
+		const nowSeconds = Math.floor(Date.now() / 1000);
+		expect(Math.abs(result.data[0].created - nowSeconds)).toBeLessThan(5);
+	});
+
+	it('should return a clear error instead of fake models when secrets are missing', async () => {
+		const response = await modelsHandler({}, {});
+		const result = await response.json();
+
+		expect(response.status).toBe(500);
+		expect(result.error.message).toMatch(/CLOUDFLARE_API_TOKEN/);
+		expect(fetch).not.toHaveBeenCalled();
+	});
+
+	it('should only serve the test model in an explicit test environment', async () => {
+		const response = await modelsHandler({}, { ENVIRONMENT: 'test' });
+		const result = await response.json();
+
+		expect(response.status).toBe(200);
+		expect(result.data.map(m => m.id)).toContain('test-model');
+	});
+
+	it('should map upstream failures to an OpenAI-style error', async () => {
+		fetch.mockResolvedValue({ ok: false, status: 502, statusText: 'Bad Gateway' });
+
+		const response = await modelsHandler({}, mockEnv);
+		const result = await response.json();
+
+		expect(response.status).toBe(500);
+		expect(result.error.type).toBe('server_error');
+	});
 });

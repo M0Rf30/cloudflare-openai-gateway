@@ -1,6 +1,6 @@
 name = "ai"
 main = "index.js"
-compatibility_date = "2024-05-06"
+compatibility_date = "2025-09-01"
 # Account ID should be set via environment variable or wrangler login
 # account_id = "your-account-id"
 
@@ -13,14 +13,7 @@ binding = "AI" # i.e. available in your Worker on env.AI
 # id = "your-kv-namespace-id"                 # Replace with your actual KV namespace ID
 # preview_id = "your-preview-kv-namespace-id" # Replace with your preview KV namespace ID
 
-# Durable Objects for rate limiting
-# [[durable_objects.bindings]]
-# name = "RATE_LIMITER"
-# class_name = "DistributedRateLimiter"
-
-# [[migrations]]
-# tag = "v1"
-# new_classes = [ "DistributedRateLimiter" ]
+# NOTE: no rate limiting here. If needed, use the Workers Rate Limiting binding ([[ratelimits]]).
 
 # R2 bucket for large file storage (audio, images, etc.)
 # Uncomment these when R2 is enabled on your account

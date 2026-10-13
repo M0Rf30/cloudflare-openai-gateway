@@ -9,9 +9,15 @@ export async function generateCacheKey(model, messages, params = {}) {
 	const cacheData = {
 		model,
 		messages,
-		temperature: params.temperature || 0.7,
-		max_tokens: params.max_tokens || 4096,
-		top_p: params.top_p || 0.9,
+		temperature: params.temperature ?? 0.7,
+		max_tokens: params.max_tokens ?? 4096,
+		top_p: params.top_p ?? 0.9,
+		stop: params.stop ?? null,
+		seed: params.seed ?? null,
+		frequency_penalty: params.frequency_penalty ?? null,
+		presence_penalty: params.presence_penalty ?? null,
+		response_format: params.response_format ?? null,
+		tools: params.tools ?? null,
 	};
 
 	const encoder = new TextEncoder();

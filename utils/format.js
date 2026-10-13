@@ -1,28 +1,19 @@
 // Response formatting utilities for OpenAI-compatible API
-import { generateId } from './ids.js';
 
-// Utility function to convert ArrayBuffer to base64 string
+/**
+ * Convert an ArrayBuffer / typed array to a base64 string.
+ * Chunked so large buffers don't blow the call stack or the 10ms CPU budget
+ * with millions of string appends. This is the single shared encoder.
+ * @param {ArrayBuffer|Uint8Array} buffer
+ * @returns {string}
+ */
 export function arrayBufferToBase64(buffer) {
-	const bytes = new Uint8Array(buffer);
+	const bytes = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
 	let binary = '';
-	for (let i = 0; i < bytes.byteLength; i++) {
-		binary += String.fromCharCode(bytes[i]);
+	for (let i = 0; i < bytes.length; i += 0x8000) {
+		binary += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
 	}
 	return btoa(binary);
-}
-
-// Utility function to extract language ID from LLM response
-export function getLanguageId(text) {
-	if (!text) return 'english';
-
-	text = text.toLowerCase().trim();
-	if (text.includes('\n')) {
-		return text.split('\n')[0];
-	} else if (text.includes(' ')) {
-		return text.split(' ')[0];
-	} else {
-		return text;
-	}
 }
 
 // Helper function to create segments from words
@@ -64,215 +55,6 @@ export function createSegmentsFromWords(words) {
 	return segments;
 }
 
-// Utility functions for time formatting
-export function formatSRTTime(seconds) {
-	const hours = Math.floor(seconds / 3600);
-	const minutes = Math.floor((seconds % 3600) / 60);
-	const secs = Math.floor(seconds % 60);
-	const ms = Math.floor((seconds % 1) * 1000);
-
-	return `${hours.toString().padStart(2, '0')}:${minutes
-		.toString()
-		.padStart(2, '0')}:${secs.toString().padStart(2, '0')},${ms.toString().padStart(3, '0')}`;
-}
-
-export function formatVTTTime(seconds) {
-	const hours = Math.floor(seconds / 3600);
-	const minutes = Math.floor((seconds % 3600) / 60);
-	const secs = Math.floor(seconds % 60);
-	const ms = Math.floor((seconds % 1) * 1000);
-
-	return `${hours.toString().padStart(2, '0')}:${minutes
-		.toString()
-		.padStart(2, '0')}:${secs.toString().padStart(2, '0')}.${ms.toString().padStart(3, '0')}`;
-}
-
-// OpenAI-compatible response formatters
-export function formatChatCompletion(response, model, stream = false) {
-	const timestamp = Math.floor(Date.now() / 1000);
-	const id = `chatcmpl-${generateId()}`;
-
-	if (stream) {
-		return {
-			id,
-			object: 'chat.completion.chunk',
-			created: timestamp,
-			model,
-			choices: [
-				{
-					index: 0,
-					delta: {
-						role: 'assistant',
-						content: response.response || '',
-					},
-					finish_reason: null,
-				},
-			],
-		};
-	}
-
-	return {
-		id,
-		object: 'chat.completion',
-		created: timestamp,
-		model,
-		choices: [
-			{
-				index: 0,
-				message: {
-					role: 'assistant',
-					content: response.response || '',
-				},
-				finish_reason: 'stop',
-			},
-		],
-		usage: {
-			prompt_tokens: estimateTokens(response.prompt || ''),
-			completion_tokens: estimateTokens(response.response || ''),
-			total_tokens: estimateTokens((response.prompt || '') + (response.response || '')),
-		},
-	};
-}
-
-export function formatCompletion(response, model, prompt) {
-	const timestamp = Math.floor(Date.now() / 1000);
-	const id = `cmpl-${generateId()}`;
-
-	return {
-		id,
-		object: 'text_completion',
-		created: timestamp,
-		model,
-		choices: [
-			{
-				text: response.response || '',
-				index: 0,
-				logprobs: null,
-				finish_reason: 'stop',
-			},
-		],
-		usage: {
-			prompt_tokens: estimateTokens(prompt),
-			completion_tokens: estimateTokens(response.response || ''),
-			total_tokens: estimateTokens(prompt + (response.response || '')),
-		},
-	};
-}
-
-export function formatEmbedding(embeddings, model, input) {
-	const data = embeddings.map((embedding, index) => ({
-		object: 'embedding',
-		embedding: Array.isArray(embedding) ? embedding : embedding.data || embedding,
-		index,
-	}));
-
-	return {
-		object: 'list',
-		data,
-		model,
-		usage: {
-			prompt_tokens: Array.isArray(input)
-				? input.reduce((sum, text) => sum + estimateTokens(text), 0)
-				: estimateTokens(input),
-			total_tokens: Array.isArray(input)
-				? input.reduce((sum, text) => sum + estimateTokens(text), 0)
-				: estimateTokens(input),
-		},
-	};
-}
-
-export function formatTranscription(response, format, options = {}) {
-	const { timestamp_granularities, words, segments } = options;
-
-	switch (format) {
-	case 'json': {
-		const jsonResponse = {
-			text: response.text || '',
-		};
-
-		if (timestamp_granularities === 'word' && words && words.length > 0) {
-			jsonResponse.words = words;
-		}
-
-		if (timestamp_granularities === 'segment') {
-			if (segments && segments.length > 0) {
-				jsonResponse.segments = segments;
-			} else if (words && words.length > 0) {
-				jsonResponse.segments = createSegmentsFromWords(words);
-			}
-		}
-
-		return jsonResponse;
-	}
-
-	case 'verbose_json':
-		return {
-			task: 'transcribe',
-			language: response.language || options.language || 'en',
-			duration: response.duration || 0,
-			text: response.text || '',
-			words: words || [],
-			segments: segments || [],
-		};
-
-	case 'text':
-		return response.text || '';
-
-	case 'srt': {
-		const srtSegments = segments && segments.length > 0 ? segments : createSegmentsFromWords(words || []);
-		if (srtSegments.length > 0) {
-			let srtContent = '';
-			srtSegments.forEach((segment, index) => {
-				const startTime = formatSRTTime(segment.start);
-				const endTime = formatSRTTime(segment.end);
-				srtContent += `${index + 1}\n${startTime} --> ${endTime}\n${segment.text}\n\n`;
-			});
-			return srtContent;
-		}
-		return response.text || '';
-	}
-
-	case 'vtt': {
-		const vttSegments = segments && segments.length > 0 ? segments : createSegmentsFromWords(words || []);
-		if (vttSegments.length > 0) {
-			let vttContent = 'WEBVTT\n\n';
-			vttSegments.forEach(segment => {
-				const startTime = formatVTTTime(segment.start);
-				const endTime = formatVTTTime(segment.end);
-				vttContent += `${startTime} --> ${endTime}\n${segment.text}\n\n`;
-			});
-			return vttContent;
-		}
-		return response.text || '';
-	}
-
-	default:
-		return response.text || '';
-	}
-}
-
-export function formatTranslation(response, format, detectedLanguage = 'unknown') {
-	const translatedText = response.translated_text || response.text || '';
-
-	switch (format) {
-	case 'json':
-		return {
-			text: translatedText,
-			language: detectedLanguage,
-		};
-
-	case 'text':
-	case 'srt':
-	case 'vtt':
-		return translatedText;
-
-	default:
-		return {
-			text: translatedText,
-		};
-	}
-}
-
 // Utility function to process and remove <think> tags from response
 export function processThink(responseText) {
 	if (typeof responseText !== 'string') {
@@ -293,116 +75,108 @@ export function estimateTokens(text) {
 	return Math.ceil(text.length / 4);
 }
 
-// Content type helpers
-export function getContentType(format) {
-	const contentTypes = {
-		json: 'application/json',
-		text: 'text/plain',
-		srt: 'application/x-subrip',
-		vtt: 'text/vtt',
-		mp3: 'audio/mpeg',
-		wav: 'audio/wav',
-		opus: 'audio/opus',
-		aac: 'audio/aac',
-		flac: 'audio/flac',
-		pcm: 'audio/pcm',
-	};
-
-	return contentTypes[format] || 'application/octet-stream';
+/**
+ * Join the text parts of an OpenAI-style message content (string | parts array).
+ * @param {*} content
+ * @returns {string}
+ */
+export function contentToText(content) {
+	if (typeof content === 'string') return content;
+	if (Array.isArray(content)) {
+		return content
+			.map(part => (typeof part === 'string' ? part : typeof part?.text === 'string' ? part.text : ''))
+			.join('');
+	}
+	if (content && typeof content === 'object' && typeof content.text === 'string') return content.text;
+	return '';
 }
 
-// CORS headers
-export function getCORSHeaders() {
-	return {
-		'Access-Control-Allow-Origin': '*',
-		'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-		'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With',
-		'Access-Control-Max-Age': '86400',
-	};
-}
-
-// Response helpers
-export function createResponse(data, options = {}) {
-	const { status = 200, headers = {}, contentType = 'application/json' } = options;
-
-	const responseHeaders = {
-		'Content-Type': contentType,
-		...getCORSHeaders(),
-		...headers,
-	};
-
-	const body = contentType === 'application/json' ? JSON.stringify(data) : data;
-
-	return new Response(body, {
-		status,
-		headers: responseHeaders,
-	});
-}
-
-export function createStreamResponse(readableStream) {
-	return new Response(readableStream, {
-		headers: {
-			'Content-Type': 'text/event-stream',
-			'Cache-Control': 'no-cache',
-			'Connection': 'keep-alive',
-			...getCORSHeaders(),
-		},
-	});
+function normalizeUsage(usage) {
+	if (!usage || typeof usage !== 'object') return null;
+	const prompt = usage.prompt_tokens ?? usage.input_tokens;
+	const completion = usage.completion_tokens ?? usage.output_tokens;
+	if (typeof prompt !== 'number' && typeof completion !== 'number') return null;
+	const p = prompt || 0;
+	const c = completion || 0;
+	return { prompt_tokens: p, completion_tokens: c, total_tokens: usage.total_tokens ?? p + c };
 }
 
 /**
- * Extract text content from an OSS model (gpt-oss-120b / gpt-oss-20b) response.
- * These models return responses in multiple possible formats that need normalization.
- * @param {*} aiResp - The raw response from env.AI.run()
- * @returns {string} The extracted text content
+ * Normalize a native Workers AI tool call or an OpenAI-style one to
+ * `{ id, name, arguments }` where `arguments` is a JSON string.
+ * @param {Object} call
+ * @returns {{id: (string|null), name: string, arguments: string}|null}
  */
-export function extractOSSResponse(aiResp) {
-	if (typeof aiResp === 'object' && aiResp !== null) {
-		// New format: output array with message objects
-		if (Array.isArray(aiResp.output)) {
-			// Look for assistant message with content array
-			const assistantMessage = aiResp.output.find(
-				msg => msg.type === 'message' && msg.role === 'assistant',
-			);
+export function normalizeToolCall(call) {
+	if (!call || typeof call !== 'object') return null;
+	const fn = call.function && typeof call.function === 'object' ? call.function : call;
+	const name = fn.name;
+	if (typeof name !== 'string' || !name) return null;
+	const args = fn.arguments ?? fn.parameters ?? {};
+	return {
+		id: call.id ?? call.call_id ?? null,
+		name,
+		arguments: typeof args === 'string' ? args : JSON.stringify(args),
+	};
+}
 
-			if (assistantMessage && Array.isArray(assistantMessage.content)) {
-				const textContent = assistantMessage.content
-					.filter(item => item.type === 'output_text')
-					.map(item => item.text)
-					.join('');
-				if (textContent) return textContent;
-			}
+/**
+ * Normalize the many shapes `env.AI.run()` returns for text generation into
+ * `{ text, toolCalls, usage, finishReason }`. Handles:
+ *  - `{ response, usage, tool_calls }` (classic Workers AI; `response` may be an
+ *    object in JSON mode)
+ *  - OpenAI-style `{ choices: [{ message, finish_reason }], usage }`
+ *  - Responses-style `{ output: [{ type: 'message' | 'function_call', ... }], usage }` (gpt-oss)
+ *  - a bare string
+ * @param {*} aiResp
+ * @returns {{text: string, toolCalls: Array, usage: (Object|null), finishReason: (string|null)}}
+ */
+export function normalizeAIResponse(aiResp) {
+	const result = { text: '', toolCalls: [], usage: null, finishReason: null };
+	if (typeof aiResp === 'string') {
+		result.text = aiResp;
+		return result;
+	}
+	if (typeof aiResp !== 'object' || aiResp === null) return result;
 
-			// Look for output_text type objects directly in the output array
-			const outputTextItems = aiResp.output.filter(item => item.type === 'output_text');
-			if (outputTextItems.length > 0) {
-				const textContent = outputTextItems.map(item => item.text).join('');
-				if (textContent) return textContent;
-			}
+	result.usage = normalizeUsage(aiResp.usage);
 
-			// Fallback to first message content
-			const firstMessage = aiResp.output[0];
-			if (firstMessage && Array.isArray(firstMessage.content)) {
-				const textContent = firstMessage.content
-					.filter(item => item.type === 'output_text')
-					.map(item => item.text)
-					.join('');
-				if (textContent) return textContent;
-			}
-
-			return aiResp.text || aiResp.response || '';
-		}
-
-		// Older format: response field directly
-		if ('response' in aiResp) {
-			return typeof aiResp.response === 'string'
-				? aiResp.response
-				: aiResp.response?.text || aiResp.response?.content || JSON.stringify(aiResp.response);
-		}
-
-		// Final fallback
-		return aiResp.text || aiResp.response || JSON.stringify(aiResp);
+	const choice = Array.isArray(aiResp.choices) ? aiResp.choices[0] : null;
+	if (choice) {
+		const message = choice.message ?? {};
+		result.text = contentToText(message.content ?? choice.text ?? '');
+		result.toolCalls = (message.tool_calls ?? []).map(normalizeToolCall).filter(Boolean);
+		result.finishReason = choice.finish_reason ?? null;
+		return result;
 	}
 
-	return String(aiResp || '');
+	if (Array.isArray(aiResp.output)) {
+		for (const item of aiResp.output) {
+			if (item?.type === 'message' && item.role === 'assistant' && Array.isArray(item.content)) {
+				result.text += item.content
+					.filter(part => part.type === 'output_text')
+					.map(part => part.text)
+					.join('');
+			} else if (item?.type === 'output_text' && typeof item.text === 'string') {
+				result.text += item.text;
+			} else if (item?.type === 'function_call') {
+				const call = normalizeToolCall(item);
+				if (call) result.toolCalls.push(call);
+			}
+		}
+		if (!result.text && typeof aiResp.text === 'string') result.text = aiResp.text;
+		if (aiResp.status === 'incomplete') result.finishReason = 'length';
+	} else {
+		const r = aiResp.response ?? aiResp.result ?? aiResp.text;
+		if (typeof r === 'string') {
+			result.text = r;
+		} else if (r !== undefined && r !== null) {
+			result.text = typeof r === 'object' && typeof r.text === 'string' ? r.text : JSON.stringify(r);
+		}
+	}
+
+	if (Array.isArray(aiResp.tool_calls)) {
+		result.toolCalls.push(...aiResp.tool_calls.map(normalizeToolCall).filter(Boolean));
+	}
+	return result;
 }
