@@ -1,7 +1,7 @@
 // Unified models configuration for Cloudflare Workers AI
 // This file contains all supported models organized by category with context windows
 //
-// Auto-generated on: 2026-10-13T17:39:17.606Z
+// Auto-generated on: 2026-10-19T16:22:49.370Z
 // To update: npm run update-models
 
 import { ValidationError } from './errors.js';
@@ -64,6 +64,7 @@ export const MODEL_CONTEXT_WINDOWS = {
 	"@cf/mistralai/mistral-small-3.1-24b-instruct": 128000,
 	"@cf/deepseek-ai/deepseek-v4-pro-0813": 1048576,
 	"@cf/meta/llama-3.2-11b-vision-instruct": 128000,
+	"@cf/daily-co/phonellm-mini-alpha-2": 262140,
 	"@cf/qwen/qwen3.8-27b": 262144,
 	"@cf/openai/whisper-tiny-en": 30,
 	"@cf/openai/whisper-large-v3-turbo": 30,
@@ -111,6 +112,7 @@ export const MODEL_CATEGORIES = {
 		"@cf/mistralai/mistral-small-3.1-24b-instruct",
 		"@cf/deepseek-ai/deepseek-v4-pro-0813",
 		"@cf/meta/llama-3.2-11b-vision-instruct",
+		"@cf/daily-co/phonellm-mini-alpha-2",
 		"@cf/qwen/qwen3.8-27b",
 		"@cf/openai/gpt-oss-20b",
 		"@cf/meta/llama-4-scout-17b-16e-instruct",
@@ -145,6 +147,7 @@ export const MODEL_CATEGORIES = {
 		"@cf/mistralai/mistral-small-3.1-24b-instruct",
 		"@cf/deepseek-ai/deepseek-v4-pro-0813",
 		"@cf/meta/llama-3.2-11b-vision-instruct",
+		"@cf/daily-co/phonellm-mini-alpha-2",
 		"@cf/qwen/qwen3.8-27b",
 		"@cf/openai/gpt-oss-20b",
 		"@cf/meta/llama-4-scout-17b-16e-instruct",
@@ -429,6 +432,10 @@ export const MODEL_CAPABILITIES = {
 	"@cf/meta/llama-3.2-11b-vision-instruct": [
 		"text-generation",
 		"vision"
+	],
+	"@cf/daily-co/phonellm-mini-alpha-2": [
+		"text-generation",
+		"function-calling"
 	],
 	"@cf/qwen/qwen3.8-27b": [
 		"text-generation",
