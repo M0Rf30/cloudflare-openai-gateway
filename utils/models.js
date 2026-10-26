@@ -1,7 +1,7 @@
 // Unified models configuration for Cloudflare Workers AI
 // This file contains all supported models organized by category with context windows
 //
-// Auto-generated on: 2026-10-19T16:22:49.370Z
+// Auto-generated on: 2026-10-26T16:01:52.829Z
 // To update: npm run update-models
 
 import { ValidationError } from './errors.js';
@@ -46,6 +46,7 @@ export const MODEL_CONTEXT_WINDOWS = {
 	"@cf/deepseek-ai/deepseek-v4-flash-0731": 1048576,
 	"@cf/leonardo/phoenix-1.0": 4096,
 	"@cf/stabilityai/stable-diffusion-xl-base-1.0": 4096,
+	"@cf/cloudflare/clairic": 65536,
 	"@cf/meta/m2m100-1.2b": 4096,
 	"@cf/ai4bharat/indictrans2-en-indic-1B": 4096,
 	"@cf/black-forest-labs/flux-2-klein-4b": 4096,
@@ -67,6 +68,7 @@ export const MODEL_CONTEXT_WINDOWS = {
 	"@cf/daily-co/phonellm-mini-alpha-2": 262140,
 	"@cf/qwen/qwen3.8-27b": 262144,
 	"@cf/openai/whisper-tiny-en": 30,
+	"@cf/deepseek-ai/deepseek-v4.1-flash-1017": 1048576,
 	"@cf/openai/whisper-large-v3-turbo": 30,
 	"@cf/deepgram/aura-1": 4096,
 	"@cf/openai/gpt-oss-20b": 128000,
@@ -101,6 +103,7 @@ export const MODEL_CATEGORIES = {
 		"@cf/meta/llama-3.3-70b-instruct-fp8-fast",
 		"@cf/ibm-granite/granite-4.0-h-micro",
 		"@cf/deepseek-ai/deepseek-v4-flash-0731",
+		"@cf/cloudflare/clairic",
 		"@cf/swiss-ai/apertus-v1.5-8b",
 		"@cf/qwen/qwen2.5-coder-32b-instruct",
 		"@cf/zai-org/glm-5.2",
@@ -114,6 +117,7 @@ export const MODEL_CATEGORIES = {
 		"@cf/meta/llama-3.2-11b-vision-instruct",
 		"@cf/daily-co/phonellm-mini-alpha-2",
 		"@cf/qwen/qwen3.8-27b",
+		"@cf/deepseek-ai/deepseek-v4.1-flash-1017",
 		"@cf/openai/gpt-oss-20b",
 		"@cf/meta/llama-4-scout-17b-16e-instruct",
 		"@cf/qwen/qwq-32b"
@@ -136,6 +140,7 @@ export const MODEL_CATEGORIES = {
 		"@cf/meta/llama-3.3-70b-instruct-fp8-fast",
 		"@cf/ibm-granite/granite-4.0-h-micro",
 		"@cf/deepseek-ai/deepseek-v4-flash-0731",
+		"@cf/cloudflare/clairic",
 		"@cf/swiss-ai/apertus-v1.5-8b",
 		"@cf/qwen/qwen2.5-coder-32b-instruct",
 		"@cf/zai-org/glm-5.2",
@@ -149,6 +154,7 @@ export const MODEL_CATEGORIES = {
 		"@cf/meta/llama-3.2-11b-vision-instruct",
 		"@cf/daily-co/phonellm-mini-alpha-2",
 		"@cf/qwen/qwen3.8-27b",
+		"@cf/deepseek-ai/deepseek-v4.1-flash-1017",
 		"@cf/openai/gpt-oss-20b",
 		"@cf/meta/llama-4-scout-17b-16e-instruct",
 		"@cf/qwen/qwq-32b"
@@ -368,6 +374,10 @@ export const MODEL_CAPABILITIES = {
 	"@cf/stabilityai/stable-diffusion-xl-base-1.0": [
 		"image-generation"
 	],
+	"@cf/cloudflare/clairic": [
+		"text-generation",
+		"vision"
+	],
 	"@cf/meta/m2m100-1.2b": [
 		"translation"
 	],
@@ -444,6 +454,11 @@ export const MODEL_CAPABILITIES = {
 	],
 	"@cf/openai/whisper-tiny-en": [
 		"speech-to-text"
+	],
+	"@cf/deepseek-ai/deepseek-v4.1-flash-1017": [
+		"text-generation",
+		"function-calling",
+		"vision"
 	],
 	"@cf/openai/whisper-large-v3-turbo": [
 		"speech-to-text"
