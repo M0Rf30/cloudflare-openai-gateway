@@ -1,7 +1,7 @@
 // Unified models configuration for Cloudflare Workers AI
 // This file contains all supported models organized by category with context windows
 //
-// Auto-generated on: 2026-10-26T16:01:52.829Z
+// Auto-generated on: 2026-11-02T19:23:20.915Z
 // To update: npm run update-models
 
 import { ValidationError } from './errors.js';
