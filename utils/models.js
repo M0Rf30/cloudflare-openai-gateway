@@ -1,7 +1,7 @@
 // Unified models configuration for Cloudflare Workers AI
 // This file contains all supported models organized by category with context windows
 //
-// Auto-generated on: 2026-10-26T16:01:52.829Z
+// Auto-generated on: 2026-11-09T19:41:34.625Z
 // To update: npm run update-models
 
 import { ValidationError } from './errors.js';
@@ -169,6 +169,7 @@ export const MODEL_CATEGORIES = {
 		"@cf/baai/bge-large-en-v1.5"
 	],
 	"audio_stt": [
+		"@cf/pipecat-ai/smart-turn-v2",
 		"@cf/openai/whisper",
 		"@cf/deepgram/nova-3",
 		"@cf/openai/whisper-tiny-en",
@@ -250,6 +251,9 @@ export const MODEL_MAPPING = {
 
 // Model capabilities
 export const MODEL_CAPABILITIES = {
+	"@cf/pipecat-ai/smart-turn-v2": [
+		"voice-activity-detection"
+	],
 	"@cf/openai/gpt-oss-120b": [
 		"text-generation",
 		"function-calling"
