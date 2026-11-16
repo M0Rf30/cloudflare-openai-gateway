@@ -1,7 +1,7 @@
 // Unified models configuration for Cloudflare Workers AI
 // This file contains all supported models organized by category with context windows
 //
-// Auto-generated on: 2026-11-09T19:41:34.625Z
+// Auto-generated on: 2026-11-16T19:28:09.500Z
 // To update: npm run update-models
 
 import { ValidationError } from './errors.js';
@@ -9,6 +9,7 @@ import { ValidationError } from './errors.js';
 // === CONTEXT WINDOW MAPPING ===
 export const MODEL_CONTEXT_WINDOWS = {
 	"@cf/pipecat-ai/smart-turn-v2": 4096,
+	"@cf/thinkingmachines/inkling-2-small": 1048576,
 	"@cf/openai/gpt-oss-120b": 128000,
 	"@cf/baai/bge-m3": 8192,
 	"@cf/huggingface/distilbert-sst-2-int8": 4096,
@@ -78,6 +79,7 @@ export const MODEL_CONTEXT_WINDOWS = {
 	"@cf/leonardo/lucid-origin": 4096,
 	"@cf/meta/llama-4-scout-17b-16e-instruct": 131000,
 	"@cf/cloudflare/clef-flash": 24576,
+	"@cf/google/embeddinggemma-2": 4096,
 	"@cf/qwen/qwq-32b": 24000,
 	"@cf/baai/bge-large-en-v1.5": 512,
 	"@cf/deepgram/aura-2-en": 4096
@@ -86,6 +88,7 @@ export const MODEL_CONTEXT_WINDOWS = {
 // === ORIGINAL MODEL CATEGORIES ===
 export const MODEL_CATEGORIES = {
 	"chat": [
+		"@cf/thinkingmachines/inkling-2-small",
 		"@cf/openai/gpt-oss-120b",
 		"@cf/google/gemma-2b-it-lora",
 		"@cf/meta/llama-3.2-3b-instruct",
@@ -123,6 +126,7 @@ export const MODEL_CATEGORIES = {
 		"@cf/qwen/qwq-32b"
 	],
 	"completion": [
+		"@cf/thinkingmachines/inkling-2-small",
 		"@cf/openai/gpt-oss-120b",
 		"@cf/google/gemma-2b-it-lora",
 		"@cf/meta/llama-3.2-3b-instruct",
@@ -253,6 +257,11 @@ export const MODEL_MAPPING = {
 export const MODEL_CAPABILITIES = {
 	"@cf/pipecat-ai/smart-turn-v2": [
 		"voice-activity-detection"
+	],
+	"@cf/thinkingmachines/inkling-2-small": [
+		"text-generation",
+		"function-calling",
+		"vision"
 	],
 	"@cf/openai/gpt-oss-120b": [
 		"text-generation",
